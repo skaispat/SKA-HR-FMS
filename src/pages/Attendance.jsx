@@ -143,7 +143,28 @@ fetchAttendanceData()
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredData.length > 0 ? (
+                {tableLoading ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <div className="flex justify-center flex-col items-center">
+                        <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
+                        <span className="text-gray-600 text-sm">Loading pending calls...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <p className="text-red-500">Error: {error}</p>
+                      <button 
+                        onClick={fetchLeavingData}
+                        className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                      >
+                        Retry
+                      </button>
+                    </td>
+                  </tr>
+                ) :filteredData.length > 0 ? (
                   filteredData.map((item, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.year}</td>

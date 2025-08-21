@@ -280,7 +280,7 @@ const handleSubmit = async (e) => {
 
     const result = await response.json();
     console.log("Update result:", result);
-    showModal(false)
+    setShowModal(false)
 fetchJoiningData()
   } catch (error) {
     console.error('Update error:', error);
@@ -470,8 +470,8 @@ fetchJoiningData()
               <p className="text-gray-500">No call history found.</p>
             </td>
           </tr>
-        ) : filteredHistoryData.map((item) => (
-                    <tr key={item.id} className="hover:bg-white hover: ">
+        ) : filteredHistoryData.map((item,index) => (
+                    <tr key={index} className="hover:bg-white hover: ">
                       <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.joiningNo}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.candidateName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.designation}</td>

@@ -4,188 +4,176 @@ import useDataStore from '../store/dataStore';
 import toast from 'react-hot-toast';
 
 const Leaving = () => {
-//  const { afterJoiningData, leavingData, addLeaving } = useDataStore();
   const [activeTab, setActiveTab] = useState('pending');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-   const [pendingData, setPendingData] = useState([]);
-    const [historyData, setHistoryData] = useState([]);
-     const [loading, setLoading] = useState(false);
-      const [tableLoading, setTableLoading] = useState(false);
-              const [submitting, setSubmitting] = useState(false);
-       const [error, setError] = useState(null);
+  const [pendingData, setPendingData] = useState([]);
+  const [historyData, setHistoryData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     dateOfLeaving: '',
     mobileNumber: '',
     reasonOfLeaving: ''
   });
 
-  // Get completed after joining data for potential leaving
-//  const completedAfterJoining = afterJoiningData.filter(item => item.completed);
-  
-  // Filter out items that are already in leaving process
-  // const pendingData = completedAfterJoining.filter(afterJoiningItem => 
-  //   !leavingData.some(leaving => leaving.employeeId === afterJoiningItem.employeeId)
-  // );
+  // Fetch joining data
+  const fetchJoiningData = async () => {
+    setLoading(true);
+    setTableLoading(true);
+    setError(null);
 
-  // const historyData = leavingData;
-
-const fetchJoiningData = async () => {
-  setLoading(true);
-  setTableLoading(true);
-  setError(null);
-
-  try {
-    const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
-    );
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const result = await response.json();
-    console.log('Raw JOINING API response:', result);
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
-    }
-    
-    // Handle both array formats (direct data or result.data)
-    const rawData = result.data || result;
-    
-    if (!Array.isArray(rawData)) {
-      throw new Error('Expected array data not received');
-    }
-
-    // Get headers from row 6 (index 5 in 0-based array)
-    const headers = rawData[5];
-    
-    // Process data starting from row 7 (index 6)
-    const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
-    
-    const getIndex = (headerName) => {
-      const index = headers.findIndex(h => 
-        h && h.toString().trim().toLowerCase() === headerName.toLowerCase()
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
       );
-      if (index === -1) {
-        console.warn(`Column "${headerName}" not found in sheet`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return index;
-    };
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
+      }
+      
+      const rawData = result.data || result;
+      
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
 
-    const processedData = dataRows.map(row => ({
-      employeeNo: row[getIndex('Employee ID')] || '',
-      candidateName: row[getIndex('Name As Per Aadhar')] || '',
-      fatherName: row[getIndex('Father Name')] || '',
-      dateOfJoining: row[getIndex('Date Of Joining')] || '',
-      designation: row[getIndex('Designation')] || '',
-      salary: row[getIndex('Salary')] || '',
-       mobileNo: row[getIndex('Mobile No.')] || '',
-       firmName: row[getIndex('Joining Company Name')] || '', 
-      workingPlace: row[getIndex('Joining Place')] || '',
-       plannedDate: row[getIndex('Planned Date')] || '',
+      const headers = rawData[5];
+      const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+      
+      const getIndex = (headerName) => {
+        const index = headers.findIndex(h => 
+          h && h.toString().trim().toLowerCase() === headerName.toLowerCase()
+        );
+        return index;
+      };
+
+      const processedData = dataRows.map(row => ({
+        employeeNo: row[getIndex('Employee ID')] || '',
+        candidateName: row[getIndex('Name As Per Aadhar')] || '',
+        fatherName: row[getIndex('Father Name')] || '',
+        dateOfJoining: row[getIndex('Date Of Joining')] || '',
+        designation: row[getIndex('Designation')] || '',
+        salary: row[getIndex('Salary')] || '',
+        mobileNo: row[getIndex('Mobile No.')] || '',
+        firmName: row[getIndex('Joining Company Name')] || '', 
+        workingPlace: row[getIndex('Joining Place')] || '',
+        plannedDate: row[getIndex('Planned Date')] || '',
         actual: row[getIndex('Actual')] || '',
-      // Add other fields as needed
-    }));
+      }));
 
-      const pendingTasks = processedData.filter(
+      // Filter for completed joining tasks
+      const completedTasks = processedData.filter(
         (task) => task.plannedDate && task.actual
       );
-    console.log('Processed joining data:', processedData);
-    setPendingData(pendingTasks);
-   
-    //  const historyTasks = processedData.filter(
-    //     (task) => task.plannedDate && task.actual
-    //   );
-    //   setHistoryData(historyTasks)
-  } catch (error) {
-    console.error('Error fetching joining data:', error);
-    setError(error.message);
-    toast.error(`Failed to load joining data: ${error.message}`);
-  } finally {
-    setLoading(false);
-    setTableLoading(false);
-  }
-};
-
-
-
-const fetchLeavingData = async () => {
-  setLoading(true);
-  setTableLoading(true);
-  setError(null);
-
-  try {
-    const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=LEAVING&action=fetch'
-    );
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      
+      setPendingData(completedTasks);
+    } catch (error) {
+      console.error('Error fetching joining data:', error);
+      setError(error.message);
+      toast.error(`Failed to load joining data: ${error.message}`);
+    } finally {
+      setLoading(false);
+      setTableLoading(false);
     }
-    
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch data from LEAVING sheet');
+  };
+
+  // Fetch leaving data
+  const fetchLeavingData = async () => {
+    setLoading(true);
+    setTableLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=LEAVING&action=fetch'
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch data from LEAVING sheet');
+      }
+      
+      const rawData = result.data || result;
+      
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
+
+      // Process data starting from row 7 (index 6) - skip headers
+      const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+      
+      const processedData = dataRows.map(row => ({
+        timestamp: row[0] || '',
+        employeeId: row[1] || '',
+        name: row[2] || '',
+        dateOfLeaving: row[3] || '',
+        mobileNo: row[4] || '',
+        reasonOfLeaving: row[5] || '',
+        firmName: row[6] || '',
+        fatherName: row[7] || '', 
+        dateOfJoining: row[8] || '', 
+        workingLocation: row[9] || '', 
+        designation: row[10] || '', 
+        salary: row[11] || '', 
+        plannedDate: row[12] || '', 
+        actual: row[13] || '', 
+      }));
+
+      const historyTasks = processedData;
+      setHistoryData(historyTasks);
+    } catch (error) {
+      console.error('Error fetching leaving data:', error);
+      setError(error.message);
+      toast.error(`Failed to load leaving data: ${error.message}`);
+    } finally {
+      setLoading(false);
+      setTableLoading(false);
     }
-    
-    const rawData = result.data || result;
-    
-    if (!Array.isArray(rawData)) {
-      throw new Error('Expected array data not received');
-    }
+  };
 
-    // Process data starting from row 7 (index 6) - skip headers
-    const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
-    
-    const processedData = dataRows.map(row => ({
-      timestamp: row[0] || '',         // Column A (index 0)
-      employeeId: row[1] || '',         // Column B (index 1)
-      name: row[2] || '',          // Column C (index 2)
-      dateOfLeaving: row[3] || '',         // Column D (index 3)
-      mobileNo: row[4] || '',              // Column E (index 4)
-      reasonOfLeaving: row[5] || '',      // Column AQ (index 42)
-      firmName: row[6] || '',           // Column AR (index 43)
-      fatherName: row[7] || '', 
-      dateOfJoining: row[8] || '', 
-      workingLocation: row[9] || '', 
-      designation: row[10] || '', 
-      salary: row[11] || '', 
-      plannedDate: row[12] || '', 
-      actual: row[13] || '', 
-      // Add more fields as needed using their column indexes
-    }));
+  useEffect(() => {
+    fetchJoiningData();
+    fetchLeavingData();
+  }, []);
 
-    // const pendingTasks = processedData.filter(
-    //   task => task.plannedDate && !task.actual
-    // );
-    
-    const historyTasks = processedData.filter(
-      task => task.plannedDate && !task.actual
-    );
-    
-    console.log('Processed leaving data:', processedData);
-    // setPendingData(pendingTasks);
-    setHistoryData(historyTasks);
-   
-  } catch (error) {
-    console.error('Error fetching leaving data:', error);
-    setError(error.message);
-    toast.error(`Failed to load leaving data: ${error.message}`);
-  } finally {
-    setLoading(false);
-    setTableLoading(false);
-  }
-};
+  // Filter out employees who already have leaving records
+  const filteredPendingData = pendingData
+    .filter(item => {
+      // Remove items that exist in history
+      const isInHistory = historyData.some(historyItem => 
+        historyItem.employeeId === item.employeeNo
+      );
+      return !isInHistory;
+    })
+    .filter(item => {
+      // Apply search filter
+      const matchesSearch = item.candidateName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           item.employeeNo?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
+    });
 
-useEffect(() => {
- fetchJoiningData()
- fetchLeavingData(); // Add this line
-}, []);
+  const filteredHistoryData = historyData.filter(item => {
+    const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.employeeId?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
 
+  // Rest of your component remains the same...
   const handleLeavingClick = (item) => {
     setSelectedItem(item);
     setFormData({
@@ -204,22 +192,20 @@ useEffect(() => {
     }));
   };
 
- const formatDOB = (dateString) => {
+  const formatDOB = (dateString) => {
     if (!dateString) return '';
     
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
-      return dateString; // Return as-is if not a valid date
+      return dateString;
     }
     
     const day = date.getDate();
-    const month = date.getMonth();
+    const month = date.getMonth() + 1; // Fixed: months are 0-indexed
     const year = date.getFullYear();
     
     return `${day}/${month}/${year}`;
   };
-
-  
 
   const handleSubmit = async(e) => {
     e.preventDefault();
@@ -228,21 +214,21 @@ useEffect(() => {
       return;
     }
 
-     try {
+    try {
       setSubmitting(true);
-  const now = new Date();
-    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} `;
+      const now = new Date();
+      const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} `;
 
- const rowData = [
-      formattedTimestamp,
+      const rowData = [
+        formattedTimestamp,
         selectedItem.employeeNo,
-       selectedItem.candidateName,
-       formatDOB(formData.dateOfLeaving) ,
+        selectedItem.candidateName,
+        formatDOB(formData.dateOfLeaving),
         formData.mobileNumber,
         formData.reasonOfLeaving,
         selectedItem.firmName,
         selectedItem.fatherName,
-       formatDOB(selectedItem.dateOfJoining) ,
+        formatDOB(selectedItem.dateOfJoining),
         selectedItem.workingPlace,
         selectedItem.designation,
         selectedItem.salary,
@@ -260,18 +246,17 @@ useEffect(() => {
       const result = await response.json();
 
       if (result.success) {
-
         setFormData({
-        dateOfLeaving :'',
-        reasonOfLeaving:'',
+          dateOfLeaving: '',
+          reasonOfLeaving: '',
         });
         setShowModal(false);
-         toast.success('Leaving request added successfully!');
-    setSelectedItem(null);
-        // Refresh the table data
-        setTableLoading(true);
-         await fetchJoiningData();
-        setTableLoading(false);
+        toast.success('Leaving request added successfully!');
+        setSelectedItem(null);
+        
+        // Refresh both datasets
+        await fetchJoiningData();
+        await fetchLeavingData();
       } else {
         toast.error('Failed to insert: ' + (result.error || 'Unknown error'));
       }
@@ -282,19 +267,6 @@ useEffect(() => {
       setSubmitting(false);
     }
   };
-   
-
-  const filteredPendingData = pendingData.filter(item => {
-    const matchesSearch = item.candidateName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.employeeNo?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
-
-  const filteredHistoryData = historyData.filter(item => {
-    const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.employeeId?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
 
   return (
     <div className="space-y-6">

@@ -151,6 +151,7 @@ const LeaveManagement = () => {
         remark: row[6] || '',
         days: calculateDays(row[4], row[5]),
         status: row[7],
+        leaveType:row[8],
       }));
 
       setPendingLeaves(processedData.filter(leave => leave.status === 'pending'));
@@ -219,6 +220,7 @@ const LeaveManagement = () => {
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">To</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
         </tr>
       </thead>
@@ -244,6 +246,7 @@ const LeaveManagement = () => {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.days}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.remark}</td>
+               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.leaveType}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
           <div className="flex space-x-2">
   <button
@@ -315,6 +318,7 @@ const LeaveManagement = () => {
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">To</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-white">
@@ -331,6 +335,7 @@ const LeaveManagement = () => {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.days}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.remark}</td>
+               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.leaveType}</td>
             </tr>
           ))
         ) : (
@@ -354,6 +359,7 @@ const LeaveManagement = () => {
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">To</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-white">
@@ -370,6 +376,7 @@ const LeaveManagement = () => {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.days}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.remark}</td>
+               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.leaveType}</td>
             </tr>
           ))
         ) : (

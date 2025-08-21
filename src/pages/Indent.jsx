@@ -275,6 +275,7 @@ const handleSubmit = async (e) => {
         formData.numberOfPost,
         formattedDate,
         formData.socialSite,
+        "open"
       ];
 
       const response = await fetch('https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec', {
