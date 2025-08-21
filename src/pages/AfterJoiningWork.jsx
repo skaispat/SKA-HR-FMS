@@ -47,7 +47,7 @@ const fetchJoiningData = async () => {
 
   try {
     const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
+      'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=JOINING&action=fetch'
     );
     
     if (!response.ok) {
@@ -207,7 +207,7 @@ const handleSubmit = async (e) => {
   try {
     // 1. Fetch current data
     const fullDataResponse = await fetch(
-      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
+      'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=JOINING&action=fetch'
     );
     if (!fullDataResponse.ok) {
       throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
@@ -268,7 +268,7 @@ const handleSubmit = async (e) => {
 
     // 8. Send update request
     const response = await fetch(
-      "https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec",
+      "https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec",
       {
         method: "POST",
         headers: {

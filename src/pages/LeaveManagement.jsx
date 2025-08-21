@@ -35,7 +35,7 @@ const LeaveManagement = () => {
     
     try {
       const fullDataResponse = await fetch(
-        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=Leave Management&action=fetch'
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=Leave Management&action=fetch'
       );
       
       if (!fullDataResponse.ok) {
@@ -84,7 +84,7 @@ const LeaveManagement = () => {
       console.log("Update payload:", payload);
 
       const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec",
+        "https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec",
         {
           method: "POST",
           headers: {
@@ -119,7 +119,7 @@ const LeaveManagement = () => {
 
     try {
       const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=Leave Management&action=fetch'
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=Leave Management&action=fetch'
       );
       
       if (!response.ok) {

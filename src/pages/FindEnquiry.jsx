@@ -44,7 +44,7 @@ const FindEnquiry = () => {
     try {
       // Fetch INDENT data
       const indentResponse = await fetch(
-        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=INDENT&action=fetch'
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=INDENT&action=fetch'
       );
       
       if (!indentResponse.ok) {
@@ -88,7 +88,7 @@ const FindEnquiry = () => {
 
       // Fetch ENQUIRY data
       const enquiryResponse = await fetch(
-        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=ENQUIRY&action=fetch'
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=ENQUIRY&action=fetch'
       );
       
       if (!enquiryResponse.ok) {
@@ -253,7 +253,7 @@ const FindEnquiry = () => {
     rowData[19] = formData.candidateResume ? "Resume URL" : ""; // col[19] - Candidate Resume
 
     const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec',
+      'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec',
       {
         method: 'POST',
         headers: {

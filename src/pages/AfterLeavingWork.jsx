@@ -33,7 +33,7 @@ const AfterLeavingWork = () => {
 
     try {
       const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=LEAVING&action=fetch'
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=LEAVING&action=fetch'
       );
       
       if (!response.ok) {
@@ -157,7 +157,7 @@ const AfterLeavingWork = () => {
   try {
     // 1. First update the LEAVING sheet
     const fullDataResponse = await fetch(
-      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=LEAVING&action=fetch'
+      'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=LEAVING&action=fetch'
     );
     if (!fullDataResponse.ok) {
       throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
@@ -214,7 +214,7 @@ const AfterLeavingWork = () => {
 
     // Send update request to LEAVING sheet
     const leavingResponse = await fetch(
-      "https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec",
+      "https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec",
       {
         method: "POST",
         headers: {
@@ -233,7 +233,7 @@ const AfterLeavingWork = () => {
 
     // 2. Now update the JOINING sheet to set status to Inactive
     const joiningResponse = await fetch(
-      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
+      'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=JOINING&action=fetch'
     );
     
     if (!joiningResponse.ok) {
@@ -289,7 +289,7 @@ const AfterLeavingWork = () => {
 
     // Send update request to JOINING sheet
     const joiningUpdateResponse = await fetch(
-      "https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec",
+      "https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec",
       {
         method: "POST",
         headers: {

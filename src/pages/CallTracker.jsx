@@ -67,7 +67,7 @@ const CallTracker = () => {
 
     try {
       const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=ENQUIRY&action=fetch'
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=ENQUIRY&action=fetch'
       );
       
       if (!response.ok) {
@@ -134,7 +134,7 @@ const fetchFollowUpData = async () => {
 
   try {
     const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=Follow - Up&action=fetch'
+      'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=Follow - Up&action=fetch'
     );
 
     if (!response.ok) {
@@ -223,7 +223,7 @@ const fetchFollowUpData = async () => {
   };
 
   const postToJoiningSheet = async (rowData) => {
-  const URL = 'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec';
+  const URL = 'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec';
 
   try {
     console.log('Attempting to post:', {
@@ -270,7 +270,7 @@ const fetchFollowUpData = async () => {
 
 
 const postToSheet = async (rowData) => {
-  const URL = 'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec';
+  const URL = 'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec';
 
   try {
     console.log('Attempting to post:', {
@@ -328,7 +328,7 @@ const postToSheet = async (rowData) => {
 
 
   // const postJoiningData = async (joiningData) => {
-  //   const URL = 'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec';
+  //   const URL = 'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec';
 
   //   try {
   //     // Prepare the data for the joining sheet

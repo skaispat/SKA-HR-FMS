@@ -47,7 +47,7 @@ const MyAttendance = () => {
 
     try {
       const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=Data&action=fetch'
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=Data&action=fetch'
       );
 
       if (!response.ok) {

@@ -21,7 +21,7 @@ const MyProfile = () => {
 
       // Fetch data from the sheet API
       const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=JOINING&action=fetch'
       );
       
       if (!response.ok) {
@@ -57,6 +57,7 @@ const MyProfile = () => {
         timestamp: row[getIndex('Timestamp')] || '',
         joiningNo: row[getIndex('Employee ID')] || '',
         candidateName: row[getIndex('Name As Per Aadhar')] || '',
+         candidatePhoto: row[getIndex("Candidate's Photo")] || '',
         fatherName: row[getIndex('Father Name')] || '',
         dateOfJoining: row[getIndex('Date Of Joining')] || '',
         joiningPlace: row[getIndex('Joining Place')] || '',
@@ -120,7 +121,7 @@ if (filteredData.length > 0) {
     
     // 1. Fetch current data from JOINING sheet
     const fullDataResponse = await fetch(
-      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
+      'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=JOINING&action=fetch'
     );
     
     if (!fullDataResponse.ok) {
@@ -187,7 +188,7 @@ if (filteredData.length > 0) {
 
     // 8. Send update request
     const response = await fetch(
-      "https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec",
+      "https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec",
       {
         method: "POST",
         headers: {
@@ -273,7 +274,7 @@ if (filteredData.length > 0) {
         <div className="bg-white rounded-xl shadow-lg border p-6">
           <div className="text-center">
             <div className="w-32 h-32 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User size={48} className="text-indigo-600" />
+             <img className='h-10 w-10' src={profileData.candidatePhoto}/>
             </div>
             <h2 className="text-xl font-bold text-gray-800">{profileData.candidateName}</h2>
             <p className="text-gray-600">{profileData.designation}</p>
