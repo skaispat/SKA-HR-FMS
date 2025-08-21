@@ -4,11 +4,17 @@ import useDataStore from '../store/dataStore';
 import toast from 'react-hot-toast';
 
 const AfterJoiningWork = () => {
-  const { employeeData, afterJoiningData, updateAfterJoining } = useDataStore();
+ // const { employeeData, afterJoiningData, updateAfterJoining } = useDataStore();
   const [activeTab, setActiveTab] = useState('pending');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [pendingData, setPendingData] = useState([]);
+  const [historyData, setHistoryData] = useState([]);
+   const [loading, setLoading] = useState(false);
+    const [tableLoading, setTableLoading] = useState(false);
+        const [submitting, setSubmitting] = useState(false);
+     const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     checkSalarySlipResume: false,
     offerLetterReceived: false,
@@ -22,20 +28,135 @@ const AfterJoiningWork = () => {
   });
 
   // Initialize after joining data from employee data
-  useEffect(() => {
-    employeeData.forEach(employee => {
-      const existsInAfterJoining = afterJoiningData.find(item => item.employeeId === employee.employeeId);
-      if (!existsInAfterJoining) {
-        useDataStore.getState().afterJoiningData.push({
-          ...employee,
-          completed: false
-        });
-      }
-    });
-  }, [employeeData]);
+  // useEffect(() => {
+  //   employeeData.forEach(employee => {
+  //     const existsInAfterJoining = afterJoiningData.find(item => item.employeeId === employee.employeeId);
+  //     if (!existsInAfterJoining) {
+  //       useDataStore.getState().afterJoiningData.push({
+  //         ...employee,
+  //         completed: false
+  //       });
+  //     }
+  //   });
+  // }, [employeeData]);
 
-  const pendingData = afterJoiningData.filter(item => !item.completed);
-  const historyData = afterJoiningData.filter(item => item.completed);
+const fetchJoiningData = async () => {
+  setLoading(true);
+  setTableLoading(true);
+  setError(null);
+
+  try {
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('Raw JOINING API response:', result);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
+    }
+    
+    // Handle both array formats (direct data or result.data)
+    const rawData = result.data || result;
+    
+    if (!Array.isArray(rawData)) {
+      throw new Error('Expected array data not received');
+    }
+
+    // Get headers from row 6 (index 5 in 0-based array)
+    const headers = rawData[5];
+    
+    // Process data starting from row 7 (index 6)
+    const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+    
+    const getIndex = (headerName) => {
+      const index = headers.findIndex(h => 
+        h && h.toString().trim().toLowerCase() === headerName.toLowerCase()
+      );
+      if (index === -1) {
+        console.warn(`Column "${headerName}" not found in sheet`);
+      }
+      return index;
+    };
+
+    const processedData = dataRows.map(row => ({
+      timestamp: row[getIndex('Timestamp')] || '',
+      joiningNo: row[getIndex('Employee ID')] || '',
+      indentNo: row[getIndex('Indent No')] || '',
+      enquiryNo: row[getIndex('Enquiry No')] || '',
+      candidateName: row[getIndex('Name As Per Aadhar')] || '',
+      fatherName: row[getIndex('Father Name')] || '',
+      dateOfJoining: row[getIndex('Date Of Joining')] || '',
+      joiningPlace: row[getIndex('Joining Place')] || '',
+      designation: row[getIndex('Designation')] || '',
+      salary: row[getIndex('Salary')] || '',
+      aadharPhoto: row[getIndex('Aadhar Frontside Photo')] || '',
+      panCard: row[getIndex('Pan card')] || '',
+      candidatePhoto: row[getIndex("Candidate's Photo")] || '',
+       currentAddress: row[getIndex('Current Address')] || '',
+        addressAsPerAadhar: row[getIndex('Address As Per Aadhar Card')] || '',
+         bodAsPerAadhar: row[getIndex('Date Of Birth As Per Aadhar Card')] || '',
+          gender: row[getIndex('Gender')] || '',
+          mobileNo: row[getIndex('Mobile No.')] || '',
+        familyMobileNo: row[getIndex('Family Mobile No.')] || '',
+        relationWithFamily: row[getIndex('Relationship With Family Person')] || '',
+         pfId: row[getIndex('Past Pf Id No. (If Any)')] || '',
+         accountNo: row[getIndex('Current Bank A.C No.')] || '', 
+          ifscCode: row[getIndex('Ifsc Code')] || '',
+           branchName: row[getIndex('Branch Name')] || '',
+            passbookPhoto: row[getIndex('Photo Of Front Bank Passbook')] || '',
+             email: row[getIndex('Personal Email-Id')] || '', 
+          esicNo: row[getIndex('ESIC No (IF Any)')] || '',
+          qualification: row[getIndex('Highest Qualification')] || '',
+            pfEligible: row[getIndex('PF Eligible')] || '',
+              esicEligible: row[getIndex('ESIC Eligible')] || '',
+                 companyName: row[getIndex('Joining Company Name')] || '',
+                  emailToBeIssue: row[getIndex('Email ID To Be Issue')] || '',
+        issueMobile: row[getIndex('Issue Mobile')] || '',
+                   issueLaptop: row[getIndex('Issue Laptop')] || '',
+                    aadharNo: row[getIndex('Aadhar Card No')] || '',
+                          modeOfAttendance: row[getIndex('Mode Of Attendance')] || '',
+                         quaficationPhoto: row[getIndex('Quafication Photo')] || '',
+                   paymentMode: row[getIndex('Payment Mode')] || '',
+                   salarySlip: row[getIndex('Salary Slip')] || '',
+                   resumeCopy: row[getIndex('Resume Copy')] || '',
+                   plannedDate: row[getIndex('Planned Date')] || '',
+                   actual: row[getIndex('Actual')] || '',
+      // Add other fields as needed
+    }));
+
+      const pendingTasks = processedData.filter(
+        (task) => task.plannedDate && !task.actual
+      );
+    console.log('Processed joining data:', processedData);
+    setPendingData(pendingTasks);
+   
+     const historyTasks = processedData.filter(
+        (task) => task.plannedDate && task.actual
+      );
+      setHistoryData(historyTasks)
+  } catch (error) {
+    console.error('Error fetching joining data:', error);
+    setError(error.message);
+    toast.error(`Failed to load joining data: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setTableLoading(false);
+  }
+};
+
+useEffect(() => {
+ 
+  fetchJoiningData(); // Add this line
+}, []);
+
+  // const pendingData =[]// afterJoiningData.filter(item => !item.completed);
+   //const historyData =[]// afterJoiningData.filter(item => item.completed);
 
   const handleAfterJoiningClick = (item) => {
     setSelectedItem(item);
@@ -60,24 +181,142 @@ const AfterJoiningWork = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+const getIndex = (headerName, headers) => {  // Add headers as parameter
+  const cleanHeader = headerName.toString().trim().toLowerCase().replace(/\s+/g, ' ');
+  const index = headers.findIndex(h => 
+    h && h.toString().trim().toLowerCase().replace(/\s+/g, ' ') === cleanHeader
+  );
+  if (index === -1) {
+    console.warn(`Column "${headerName}" not found in sheet. Available columns:`, headers);
+    return -1;
+  }
+  return index;
+};
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+   setSubmitting(true);
+
+     if (!selectedItem.joiningNo || !selectedItem.candidateName) {
+       toast.error('Please fill all required fields');
+       setSubmitting(false);
+       return;
+     }
+
+  try {
+    // 1. Fetch current data
+    const fullDataResponse = await fetch(
+      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
+    );
+    if (!fullDataResponse.ok) {
+      throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
+    }
+
+    const fullDataResult = await fullDataResponse.json();
+    const allData = fullDataResult.data || fullDataResult;
+
+    // 2. Find header row
+    let headerRowIndex = allData.findIndex(row =>
+      row.some(cell => cell?.toString().trim().toLowerCase().includes('employee id'))
+    );
+    if (headerRowIndex === -1) headerRowIndex = 4;
+
+    const headers = allData[headerRowIndex].map(h => h?.toString().trim());
+
+    // 3. Find Employee ID column index
+    const employeeIdIndex = headers.findIndex(h => h?.toLowerCase() === "employee id");
+    if (employeeIdIndex === -1) {
+      throw new Error("Could not find 'Employee ID' column");
+    }
+
+    // 4. Find the employee row index
+    const rowIndex = allData.findIndex((row, idx) =>
+      idx > headerRowIndex &&
+      row[employeeIdIndex]?.toString().trim() === selectedItem.joiningNo?.toString().trim()
+    );
+    if (rowIndex === -1) throw new Error(`Employee ${selectedItem.joiningNo} not found`);
+
+    // 5. Get a copy of the existing row
+    let currentRow = [...allData[rowIndex]]; // full array of cells for this row
+ const now = new Date();
+    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} `;
+
+    // 6. Apply updates starting at the correct column
+    // Column 44 in sheet → index 43 in JS array
+    const startColumnIndex = 43; // zero-based index
+
+    currentRow[startColumnIndex] =formattedTimestamp; // Actual Date
+    currentRow[startColumnIndex + 2] = formData.checkSalarySlipResume ? "Yes" : "No";
+    currentRow[startColumnIndex + 3] = formData.offerLetterReceived ? "Yes" : "No";
+    currentRow[startColumnIndex + 4] = formData.welcomeMeeting ? "Yes" : "No";
+    currentRow[startColumnIndex + 5] = formData.biometricAccess ? "Yes" : "No";
+    currentRow[startColumnIndex + 6] = formData.officialEmailId ? "Yes" : "No";
+    currentRow[startColumnIndex + 7] = formData.assignAssets ? "Yes" : "No";
+    currentRow[startColumnIndex + 8] = formData.pfEsic ? "Yes" : "No";
+    currentRow[startColumnIndex + 9] = formData.companyDirectory ? "Yes" : "No";
+
+    // 7. Prepare payload — Google Apps Script expects rowData
+    const payload = {
+      sheetName: "JOINING", // match your Apps Script param name
+      action: "update",
+      rowIndex: rowIndex + 1, // 1-based index
+      rowData: JSON.stringify(currentRow) // send full row array
+    };
+
+    console.log("Final payload being sent:", payload);
+
+    // 8. Send update request
+    const response = await fetch(
+      "https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(payload).toString(),
+      }
+    );
+
+    const result = await response.json();
+    console.log("Update result:", result);
+    showModal(false)
+fetchJoiningData()
+  } catch (error) {
+    console.error('Update error:', error);
+    toast.error(`Update failed: ${error.message}`);
+  } finally {
+    setLoading(false);
+     setSubmitting(false);
+  }
+};
+
+   // updateAfterJoining(selectedItem.id, formData);
+   const formatDOB = (dateString) => {
+    if (!dateString) return '';
     
-    updateAfterJoining(selectedItem.id, formData);
-    toast.success('After joining work updated successfully!');
-    setShowModal(false);
-    setSelectedItem(null);
-  };
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString; // Return as-is if not a valid date
+    }
+    
+    const day = date.getDate();
+    const month = date.getMonth();
+    const year = date.getFullYear().toString().slice(-2);
+    
+    return `${day}/${month}/${year}`;
+  }; 
+  
 
   const filteredPendingData = pendingData.filter(item => {
-    const matchesSearch = item.nameAsPerAadhar?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.employeeId?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = item.candidateName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.joiningNo?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
   const filteredHistoryData = historyData.filter(item => {
-    const matchesSearch = item.nameAsPerAadhar?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.employeeId?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = item.candidateName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.joiningNo?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
@@ -133,56 +372,80 @@ const AfterJoiningWork = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="p-6">
-          {activeTab === 'pending' && (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y   divide-white  ">
-                <thead className="bg-white  ">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Action</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Employee ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Father Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Date Of Joining</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Designation</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Salary</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y   divide-white  ">
-                  {filteredPendingData.map((item) => (
-                    <tr key={item.id} className="hover:bg-white hover: ">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleAfterJoiningClick(item)}
-                          className="px-3 py-1 bg-white text-purple-700 rounded-md   text-sm"
-                        >
-                          Process
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.employeeId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.nameAsPerAadhar}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.fatherName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">
-                        {item.dateOfJoining ? new Date(item.dateOfJoining).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.designation}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.salary}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {filteredPendingData.length === 0 && (
-                <div className="px-6 py-12 text-center">
-                  <p className=" text-gray-500  ">No pending after joining work found.</p>
+      <div className="p-6">
+  {activeTab === 'pending' && (
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-white">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Father Name</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Of Joining</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-white">
+          {tableLoading ? (
+            <tr>
+              <td colSpan="7" className="px-6 py-12 text-center">
+                <div className="flex justify-center flex-col items-center">
+                  <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
+                  <span className="text-gray-600 text-sm">Loading pending calls...</span>
                 </div>
-              )}
-            </div>
+              </td>
+            </tr>
+          ) : error ? (
+            <tr>
+              <td colSpan="7" className="px-6 py-12 text-center">
+                <p className="text-red-500">Error: {error}</p>
+                <button 
+                  onClick={fetchEnquiryData}
+                  className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                >
+                  Retry
+                </button>
+              </td>
+            </tr>
+          ) : filteredPendingData.length > 0 ? (
+            filteredPendingData.map((item, index) => (
+              <tr key={index} className="hover:bg-white">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <button
+                    onClick={() => handleAfterJoiningClick(item)}
+                    className="px-3 py-1 bg-indigo-700 text-white rounded-md text-sm"
+                  >
+                    Process
+                  </button>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.joiningNo}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.candidateName}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.fatherName}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {formatDOB(item.dateOfJoining)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.designation}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.salary}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="7" className="px-6 py-12 text-center">
+                <p className="text-gray-500">No pending after joining work found.</p>
+              </td>
+            </tr>
           )}
+        </tbody>
+      </table>
+    </div>
+  )}
 
           {activeTab === 'history' && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y   divide-white  ">
-                <thead className="bg-white  ">
+                <thead className="bg-gray-100  ">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Employee ID</th>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Name</th>
@@ -192,16 +455,32 @@ const AfterJoiningWork = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y   divide-white  ">
-                  {filteredHistoryData.map((item) => (
+                  {tableLoading ? (
+          <tr>
+            <td colSpan="5" className="px-6 py-12 text-center">
+              <div className="flex justify-center flex-col items-center">
+                <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
+                <span className="text-gray-600 text-sm">Loading call history...</span>
+              </div>
+            </td>
+          </tr>
+        ) : filteredHistoryData.length === 0 ? (
+          <tr>
+            <td colSpan="5" className="px-6 py-12 text-center">
+              <p className="text-gray-500">No call history found.</p>
+            </td>
+          </tr>
+        ) : filteredHistoryData.map((item) => (
                     <tr key={item.id} className="hover:bg-white hover: ">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.employeeId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.nameAsPerAadhar}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.joiningNo}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.candidateName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">{item.designation}</td>
+                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+{formatDOB(item.dateOfJoining)}
+</td>
+
                       <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">
-                        {item.dateOfJoining ? new Date(item.dateOfJoining).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm  text-gray-500">
-                        <span className="px-2 py-1 text-xs rounded-full bg-green-500   text-green-400">
+                        <span className="px-2 py-1 text-xs rounded-full bg-green-500 font-semibold  text-white">
                           Completed
                         </span>
                       </td>
@@ -221,9 +500,9 @@ const AfterJoiningWork = () => {
 
       {/* Modal */}
       {showModal && selectedItem && (
-        <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
-          <div className="  rounded-lg shadow-lg w-full max-w-2xl">
-            <div className="flex justify-between items-center p-6 border-b border-gray-300  ">
+        <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4 ">
+          <div className="bg-white  rounded-lg shadow-lg w-full max-w-2xl">
+            <div className="flex justify-between items-center p-6 border-b  ">
               <h3 className="text-lg font-medium  text-gray-500">After Joining Work Checklist</h3>
               <button onClick={() => setShowModal(false)} className=" text-gray-500  ">
                 <X size={20} />
@@ -235,7 +514,7 @@ const AfterJoiningWork = () => {
                   <label className="block text-sm font-medium  text-gray-500 mb-1">Employee ID</label>
                   <input
                     type="text"
-                    value={selectedItem.employeeId}
+                    value={selectedItem.joiningNo}
                     disabled
                     className="w-full border border-gray-300   rounded-md px-3 py-2 bg-white    text-gray-500"
                   />
@@ -244,7 +523,7 @@ const AfterJoiningWork = () => {
                   <label className="block text-sm font-medium  text-gray-500 mb-1">Name</label>
                   <input
                     type="text"
-                    value={selectedItem.nameAsPerAadhar}
+                    value={selectedItem.candidateName}
                     disabled
                     className="w-full border border-gray-300   rounded-md px-3 py-2 bg-white    text-gray-500"
                   />
@@ -270,7 +549,7 @@ const AfterJoiningWork = () => {
                       id={item.key}
                       checked={formData[item.key]}
                       onChange={() => handleCheckboxChange(item.key)}
-                      className="h-4 w-4  text-gray-500  focus:ring-blue-500 border-gray-300   rounded bg-white  "
+                      className="h-4 w-4  text-gray-500  focus:ring-blue-500 border-gray-300   rounded bg-white"
                     />
                     <label htmlFor={item.key} className="ml-2 text-sm  text-gray-500">
                       {item.label}
@@ -287,12 +566,28 @@ const AfterJoiningWork = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-white text-purple-700 rounded-md  "
-                >
-                  Submit
-                </button>
+                 <button
+    type="submit"
+    className={`px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-indigo-800 min-h-[42px] flex items-center justify-center ${
+      submitting ? 'opacity-90 cursor-not-allowed' : ''
+    }`}
+    disabled={submitting}
+  >
+    {submitting ? (
+      <div className="flex items-center">
+        <svg 
+          className="animate-spin h-4 w-4 text-white mr-2" 
+          xmlns="http://www.w3.org/2000/svg" 
+          fill="none" 
+          viewBox="0 0 24 24"
+        >
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Submitting...</span>
+      </div>
+    ) : 'Submit'}
+  </button>
               </div>
             </form>
           </div>

@@ -4,11 +4,17 @@ import useDataStore from '../store/dataStore';
 import toast from 'react-hot-toast';
 
 const Leaving = () => {
-  const { afterJoiningData, leavingData, addLeaving } = useDataStore();
+//  const { afterJoiningData, leavingData, addLeaving } = useDataStore();
   const [activeTab, setActiveTab] = useState('pending');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+   const [pendingData, setPendingData] = useState([]);
+    const [historyData, setHistoryData] = useState([]);
+     const [loading, setLoading] = useState(false);
+      const [tableLoading, setTableLoading] = useState(false);
+              const [submitting, setSubmitting] = useState(false);
+       const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     dateOfLeaving: '',
     mobileNumber: '',
@@ -16,14 +22,169 @@ const Leaving = () => {
   });
 
   // Get completed after joining data for potential leaving
-  const completedAfterJoining = afterJoiningData.filter(item => item.completed);
+//  const completedAfterJoining = afterJoiningData.filter(item => item.completed);
   
   // Filter out items that are already in leaving process
-  const pendingData = completedAfterJoining.filter(afterJoiningItem => 
-    !leavingData.some(leaving => leaving.employeeId === afterJoiningItem.employeeId)
-  );
+  // const pendingData = completedAfterJoining.filter(afterJoiningItem => 
+  //   !leavingData.some(leaving => leaving.employeeId === afterJoiningItem.employeeId)
+  // );
 
-  const historyData = leavingData;
+  // const historyData = leavingData;
+
+const fetchJoiningData = async () => {
+  setLoading(true);
+  setTableLoading(true);
+  setError(null);
+
+  try {
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('Raw JOINING API response:', result);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
+    }
+    
+    // Handle both array formats (direct data or result.data)
+    const rawData = result.data || result;
+    
+    if (!Array.isArray(rawData)) {
+      throw new Error('Expected array data not received');
+    }
+
+    // Get headers from row 6 (index 5 in 0-based array)
+    const headers = rawData[5];
+    
+    // Process data starting from row 7 (index 6)
+    const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+    
+    const getIndex = (headerName) => {
+      const index = headers.findIndex(h => 
+        h && h.toString().trim().toLowerCase() === headerName.toLowerCase()
+      );
+      if (index === -1) {
+        console.warn(`Column "${headerName}" not found in sheet`);
+      }
+      return index;
+    };
+
+    const processedData = dataRows.map(row => ({
+      employeeNo: row[getIndex('Employee ID')] || '',
+      candidateName: row[getIndex('Name As Per Aadhar')] || '',
+      fatherName: row[getIndex('Father Name')] || '',
+      dateOfJoining: row[getIndex('Date Of Joining')] || '',
+      designation: row[getIndex('Designation')] || '',
+      salary: row[getIndex('Salary')] || '',
+       mobileNo: row[getIndex('Mobile No.')] || '',
+       firmName: row[getIndex('Joining Company Name')] || '', 
+      workingPlace: row[getIndex('Joining Place')] || '',
+       plannedDate: row[getIndex('Planned Date')] || '',
+        actual: row[getIndex('Actual')] || '',
+      // Add other fields as needed
+    }));
+
+      const pendingTasks = processedData.filter(
+        (task) => task.plannedDate && task.actual
+      );
+    console.log('Processed joining data:', processedData);
+    setPendingData(pendingTasks);
+   
+    //  const historyTasks = processedData.filter(
+    //     (task) => task.plannedDate && task.actual
+    //   );
+    //   setHistoryData(historyTasks)
+  } catch (error) {
+    console.error('Error fetching joining data:', error);
+    setError(error.message);
+    toast.error(`Failed to load joining data: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setTableLoading(false);
+  }
+};
+
+
+
+const fetchLeavingData = async () => {
+  setLoading(true);
+  setTableLoading(true);
+  setError(null);
+
+  try {
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=LEAVING&action=fetch'
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch data from LEAVING sheet');
+    }
+    
+    const rawData = result.data || result;
+    
+    if (!Array.isArray(rawData)) {
+      throw new Error('Expected array data not received');
+    }
+
+    // Process data starting from row 7 (index 6) - skip headers
+    const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+    
+    const processedData = dataRows.map(row => ({
+      timestamp: row[0] || '',         // Column A (index 0)
+      employeeId: row[1] || '',         // Column B (index 1)
+      name: row[2] || '',          // Column C (index 2)
+      dateOfLeaving: row[3] || '',         // Column D (index 3)
+      mobileNo: row[4] || '',              // Column E (index 4)
+      reasonOfLeaving: row[5] || '',      // Column AQ (index 42)
+      firmName: row[6] || '',           // Column AR (index 43)
+      fatherName: row[7] || '', 
+      dateOfJoining: row[8] || '', 
+      workingLocation: row[9] || '', 
+      designation: row[10] || '', 
+      salary: row[11] || '', 
+      plannedDate: row[12] || '', 
+      actual: row[13] || '', 
+      // Add more fields as needed using their column indexes
+    }));
+
+    // const pendingTasks = processedData.filter(
+    //   task => task.plannedDate && !task.actual
+    // );
+    
+    const historyTasks = processedData.filter(
+      task => task.plannedDate && !task.actual
+    );
+    
+    console.log('Processed leaving data:', processedData);
+    // setPendingData(pendingTasks);
+    setHistoryData(historyTasks);
+   
+  } catch (error) {
+    console.error('Error fetching leaving data:', error);
+    setError(error.message);
+    toast.error(`Failed to load leaving data: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setTableLoading(false);
+  }
+};
+
+useEffect(() => {
+ fetchJoiningData()
+ fetchLeavingData(); // Add this line
+}, []);
 
   const handleLeavingClick = (item) => {
     setSelectedItem(item);
@@ -43,31 +204,94 @@ const Leaving = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+ const formatDOB = (dateString) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString; // Return as-is if not a valid date
+    }
+    
+    const day = date.getDate();
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
+  };
+
+  
+
+  const handleSubmit = async(e) => {
     e.preventDefault();
     if (!formData.dateOfLeaving || !formData.reasonOfLeaving) {
       toast.error('Please fill all required fields');
       return;
     }
 
-    addLeaving({
-      ...selectedItem,
-      ...formData
-    });
-    
-    toast.success('Leaving request added successfully!');
-    setShowModal(false);
+     try {
+      setSubmitting(true);
+  const now = new Date();
+    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} `;
+
+ const rowData = [
+      formattedTimestamp,
+        selectedItem.employeeNo,
+       selectedItem.candidateName,
+       formatDOB(formData.dateOfLeaving) ,
+        formData.mobileNumber,
+        formData.reasonOfLeaving,
+        selectedItem.firmName,
+        selectedItem.fatherName,
+       formatDOB(selectedItem.dateOfJoining) ,
+        selectedItem.workingPlace,
+        selectedItem.designation,
+        selectedItem.salary,
+      ];
+
+      const response = await fetch('https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec', {
+        method: 'POST',
+        body: new URLSearchParams({
+          sheetName: 'LEAVING',
+          action: 'insert',
+          rowData: JSON.stringify(rowData),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+
+        setFormData({
+        dateOfLeaving :'',
+        reasonOfLeaving:'',
+        });
+        setShowModal(false);
+         toast.success('Leaving request added successfully!');
     setSelectedItem(null);
+        // Refresh the table data
+        setTableLoading(true);
+         await fetchJoiningData();
+        setTableLoading(false);
+      } else {
+        toast.error('Failed to insert: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Insert error:', error);
+      toast.error('Something went wrong!');
+    } finally {
+      setSubmitting(false);
+    }
   };
+   
 
   const filteredPendingData = pendingData.filter(item => {
-    const matchesSearch = item.nameAsPerAadhar?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.employeeId?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = item.candidateName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.employeeNo?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
   const filteredHistoryData = historyData.filter(item => {
-    const matchesSearch = item.nameAsPerAadhar?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.employeeId?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
@@ -128,7 +352,7 @@ const Leaving = () => {
           {activeTab === 'pending' && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-white  ">
-                <thead className="bg-white  ">
+                <thead className="bg-gray-100 ">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
@@ -140,18 +364,39 @@ const Leaving = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white  ">
-                  {filteredPendingData.map((item) => (
-                    <tr key={item.id} className="hover:bg-white hover: ">
+                  {tableLoading ? (
+            <tr>
+              <td colSpan="7" className="px-6 py-12 text-center">
+                <div className="flex justify-center flex-col items-center">
+                  <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
+                  <span className="text-gray-600 text-sm">Loading pending calls...</span>
+                </div>
+              </td>
+            </tr>
+          ) : error ? (
+            <tr>
+              <td colSpan="7" className="px-6 py-12 text-center">
+                <p className="text-red-500">Error: {error}</p>
+                <button 
+                  onClick={fetchEnquiryData}
+                  className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                >
+                  Retry
+                </button>
+              </td>
+            </tr>
+          ) :filteredPendingData.map((item,index) => (
+                    <tr key={index} className="hover:bg-white hover: ">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => handleLeavingClick(item)}
-                          className="px-3 py-1 bg-white text-purple-700 rounded-md  text-sm"
+                          className="px-3 py-1  bg-indigo-700 text-white rounded-md  text-sm"
                         >
                           Leaving
                         </button>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.nameAsPerAadhar}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeNo}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.candidateName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.fatherName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {item.dateOfJoining ? new Date(item.dateOfJoining).toLocaleDateString() : '-'}
@@ -162,7 +407,7 @@ const Leaving = () => {
                   ))}
                 </tbody>
               </table>
-              {filteredPendingData.length === 0 && (
+              {! tableLoading &&filteredPendingData.length === 0 && (
                 <div className="px-6 py-12 text-center">
                   <p className="text-gray-500  ">No pending leaving requests found.</p>
                 </div>
@@ -173,7 +418,7 @@ const Leaving = () => {
           {activeTab === 'history' && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-white  ">
-                <thead className="bg-white  ">
+                <thead className="bg-gray-100 ">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -184,15 +429,36 @@ const Leaving = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white  ">
-                  {filteredHistoryData.map((item) => (
-                    <tr key={item.id} className="hover:bg-white hover: ">
+                  {tableLoading ? (
+            <tr>
+              <td colSpan="7" className="px-6 py-12 text-center">
+                <div className="flex justify-center flex-col items-center">
+                  <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
+                  <span className="text-gray-600 text-sm">Loading pending calls...</span>
+                </div>
+              </td>
+            </tr>
+          ) : error ? (
+            <tr>
+              <td colSpan="7" className="px-6 py-12 text-center">
+                <p className="text-red-500">Error: {error}</p>
+                <button 
+                  onClick={fetchEnquiryData}
+                  className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                >
+                  Retry
+                </button>
+              </td>
+            </tr>
+          ) :filteredHistoryData.map((item,index) => (
+                    <tr key={index} className="hover:bg-white hover: ">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.nameAsPerAadhar}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.dateOfJoining ? new Date(item.dateOfJoining).toLocaleDateString() : '-'}
+                        {item.dateOfJoining ? formatDOB(item.dateOfJoining) : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.dateOfLeaving ? new Date(item.dateOfLeaving).toLocaleDateString() : '-'}
+                        {item.dateOfLeaving ?formatDOB(item.dateOfLeaving) : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.designation}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.reasonOfLeaving}</td>
@@ -212,31 +478,31 @@ const Leaving = () => {
 
       {/* Modal */}
       {showModal && selectedItem && (
-        <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
-          <div className="  rounded-lg shadow-lg w-full max-w-md">
+        <div className=" fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+          <div className=" bg-white rounded-lg shadow-lg w-full max-w-md">
             <div className="flex justify-between items-center p-6 border-b border-gray-300  ">
-              <h3 className="text-lg font-medium text-gray-500">Leaving Form</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-500  ">
+              <h3 className="text-lg font-medium text-gray-700">Leaving Form</h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-700  ">
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Employee ID</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
                 <input
                   type="text"
-                  value={selectedItem.employeeId}
+                  value={selectedItem.employeeNo}
                   disabled
-                  className="w-full border border-gray-300   rounded-md px-3 py-2 bg-white   text-gray-500"
+                  className="w-full border border-gray-500   rounded-md px-3 py-2 bg-white   text-gray-700"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                 <input
                   type="text"
-                  value={selectedItem.nameAsPerAadhar}
+                  value={selectedItem.candidateName}
                   disabled
-                  className="w-full border border-gray-300   rounded-md px-3 py-2 bg-white   text-gray-500"
+                  className="w-full border border-gray-500   rounded-md px-3 py-2 bg-white   text-gray-700"
                 />
               </div>
               <div>
@@ -246,7 +512,7 @@ const Leaving = () => {
                   name="dateOfLeaving"
                   value={formData.dateOfLeaving}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300   rounded-md px-3 py-2 focus:outline-none focus:ring-2  focus:ring-blue-500 bg-white   text-gray-500"
+                  className="w-full border border-gray-500   rounded-md px-3 py-2 focus:outline-none focus:ring-2  focus:ring-blue-500 bg-white   text-gray-700"
                   required
                 />
               </div>
@@ -257,17 +523,17 @@ const Leaving = () => {
                   name="mobileNumber"
                   value={formData.mobileNumber}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300   rounded-md px-3 py-2 focus:outline-none focus:ring-2  focus:ring-blue-500 bg-white   text-gray-500    "
+                  className="w-full border border-gray-500   rounded-md px-3 py-2 focus:outline-none focus:ring-2  focus:ring-blue-500 bg-white   text-gray-700    "
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Reason Of Leaving *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason Of Leaving *</label>
                 <textarea
                   name="reasonOfLeaving"
                   value={formData.reasonOfLeaving}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full border border-gray-300   rounded-md px-3 py-2 focus:outline-none focus:ring-2  focus:ring-blue-500 bg-white   text-gray-500    "
+                  className="w-full border border-gray-500   rounded-md px-3 py-2 focus:outline-none focus:ring-2  focus:ring-blue-500 bg-white   text-gray-700    "
                   required
                 />
               </div>
@@ -275,16 +541,32 @@ const Leaving = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-gray-300   rounded-md text-gray-500 hover:bg-white  "
+                  className="px-4 py-2 border border-gray-300   rounded-md text-gray-700 hover:bg-white  "
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-white text-purple-700 rounded-md "
-                >
-                  Submit
-                </button>
+               <button
+    type="submit"
+    className={`px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-indigo-800 min-h-[42px] flex items-center justify-center ${
+      submitting ? 'opacity-90 cursor-not-allowed' : ''
+    }`}
+    disabled={submitting}
+  >
+    {submitting ? (
+      <div className="flex items-center">
+        <svg 
+          className="animate-spin h-4 w-4 text-white mr-2" 
+          xmlns="http://www.w3.org/2000/svg" 
+          fill="none" 
+          viewBox="0 0 24 24"
+        >
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Submitting...</span>
+      </div>
+    ) : 'Submit'}
+  </button>
               </div>
             </form>
           </div>

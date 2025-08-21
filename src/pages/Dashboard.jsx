@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -26,28 +26,17 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
-  // Mock data for charts
+  const [totalEmployee, setTotalEmployee] = useState(0);
+  const [activeEmployee, setActiveEmployee] = useState(0);
+  const [leftEmployee, setLeftEmployee] = useState(0);
+  const [leaveThisMonth, setLeaveThisMonth] = useState(0);
+  const [monthlyHiringData, setMonthlyHiringData] = useState([]);
+  const [designationData, setDesignationData] = useState([]);
+  
+  // Mock data for other charts
   const employeeStatusData = [
-    { name: 'Active', value: 85, color: '#10B981' },
-    { name: 'On Leave', value: 12, color: '#F59E0B' },
-    { name: 'Resigned', value: 8, color: '#EF4444' }
-  ];
-
-  const monthlyHiringData = [
-    { month: 'Jan', hired: 12, left: 3 },
-    { month: 'Feb', hired: 15, left: 5 },
-    { month: 'Mar', hired: 18, left: 2 },
-    { month: 'Apr', hired: 22, left: 7 },
-    { month: 'May', hired: 20, left: 4 },
-    { month: 'Jun', hired: 25, left: 6 }
-  ];
-
-  const departmentData = [
-    { department: 'IT', employees: 45 },
-    { department: 'HR', employees: 12 },
-    { department: 'Finance', employees: 18 },
-    { department: 'Marketing', employees: 25 },
-    { department: 'Operations', employees: 35 }
+    { name: 'Active', value: activeEmployee, color: '#10B981' },
+    { name: 'Resigned', value: leftEmployee, color: '#EF4444' }
   ];
 
   const performanceData = [
@@ -58,6 +47,272 @@ const Dashboard = () => {
     { month: 'May', productivity: 94, satisfaction: 90 },
     { month: 'Jun', productivity: 96, satisfaction: 92 }
   ];
+
+  const parseSheetDate = (dateStr) => {
+    if (!dateStr) return null;
+    
+    // Already a Date object
+    if (dateStr instanceof Date) return dateStr;
+    
+    // Try ISO / normal parse
+    const iso = Date.parse(dateStr);
+    if (!isNaN(iso)) return new Date(iso);
+    
+    // Try dd/mm/yyyy or d/m/yyyy
+    const parts = dateStr.toString().split(/[\/\-]/); // split by "/" or "-"
+    if (parts.length === 3) {
+      let [day, month, year] = parts.map(p => parseInt(p, 10));
+      if (year < 100) year += 2000; // handle yy
+      return new Date(year, month - 1, day);
+    }
+    
+    return null;
+  };
+
+  const fetchJoiningCount = async () => {
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
+      );
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+  
+      const result = await response.json();
+  
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
+      }
+  
+      const rawData = result.data || result;
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
+  
+      // Headers are row 6 → index 5
+      const headers = rawData[5];
+      const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+  
+      // Find index of "Status", "Date of Joining", and "Designation" columns
+      const statusIndex = headers.findIndex(
+        h => h && h.toString().trim().toLowerCase() === "status"
+      );
+      
+      const dateOfJoiningIndex = headers.findIndex(
+        h => h && h.toString().trim().toLowerCase().includes("date of joining")
+      );
+
+      const designationIndex = headers.findIndex(
+        h => h && h.toString().trim().toLowerCase() === "designation"
+      );
+  
+      let activeCount = 0;
+      const monthlyHiring = {};
+      const designationCounts = {};
+      
+      // Initialize monthly hiring data for the last 6 months
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const currentDate = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const monthIndex = (currentDate.getMonth() - i + 12) % 12;
+        const monthYear = `${months[monthIndex]} ${currentDate.getFullYear()}`;
+        monthlyHiring[monthYear] = { hired: 0 };
+      }
+  
+      if (statusIndex !== -1) {
+        activeCount = dataRows.filter(
+          row => row[statusIndex]?.toString().trim().toLowerCase() === "active"
+        ).length;
+      }
+  
+      // Count hires by month if date of joining column exists
+      if (dateOfJoiningIndex !== -1) {
+        dataRows.forEach(row => {
+          const dateStr = row[dateOfJoiningIndex];
+          if (dateStr) {
+            const date = parseSheetDate(dateStr);
+            if (date) {
+              const monthYear = `${months[date.getMonth()]} ${date.getFullYear()}`;
+              if (monthlyHiring[monthYear]) {
+                monthlyHiring[monthYear].hired += 1;
+              } else {
+                monthlyHiring[monthYear] = { hired: 1 };
+              }
+            }
+          }
+        });
+      }
+
+      // Count employees by designation
+      if (designationIndex !== -1) {
+        dataRows.forEach(row => {
+          const designation = row[designationIndex]?.toString().trim();
+          if (designation) {
+            if (designationCounts[designation]) {
+              designationCounts[designation] += 1;
+            } else {
+              designationCounts[designation] = 1;
+            }
+          }
+        });
+
+        // Convert to array format for the chart
+        const designationArray = Object.keys(designationCounts).map(key => ({
+          designation: key,
+          employees: designationCounts[key]
+        }));
+
+        setDesignationData(designationArray);
+      }
+  
+      // Update state
+      setTotalEmployee(dataRows.length);
+      setActiveEmployee(activeCount);
+      
+      // Return both counts and monthly hiring data
+      return { 
+        total: dataRows.length, 
+        active: activeCount,
+        monthlyHiring 
+      };
+  
+    } catch (error) {
+      console.error("Error fetching joining count:", error);
+      return { total: 0, active: 0, monthlyHiring: {} };
+    }
+  };
+
+  const fetchLeaveCount = async () => {
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=LEAVING&action=fetch'
+      );
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+  
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch data from LEAVING sheet');
+      }
+  
+      const rawData = result.data || result;
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
+  
+      const headers = rawData[5];       // Row 6 headers
+      const dataRows = rawData.slice(6); // Row 7 onwards
+  
+      const normalize = (str) =>
+        str ? str.toString().trim().toLowerCase().replace(/\s+/g, " ") : "";
+  
+      const dateIndex = headers.findIndex(
+        (h) => normalize(h) === "date of leaving"
+      );
+  
+      if (dateIndex === -1) {
+        console.warn("⚠️ 'Date Of Leaving' column not found");
+        setLeftEmployee(dataRows.length);
+        setLeaveThisMonth(0);
+        return { total: dataRows.length, monthlyLeaving: {} };
+      }
+  
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+  
+      const thisMonthCount = dataRows.filter(row => {
+        const parsedDate = parseSheetDate(row[dateIndex]);
+        return (
+          parsedDate &&
+          parsedDate.getMonth() === currentMonth &&
+          parsedDate.getFullYear() === currentYear
+        );
+      }).length;
+  
+      // Count leaving by month
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthlyLeaving = {};
+      
+      // Initialize monthly leaving data for the last 6 months
+      for (let i = 5; i >= 0; i--) {
+        const monthIndex = (now.getMonth() - i + 12) % 12;
+        const monthYear = `${months[monthIndex]} ${now.getFullYear()}`;
+        monthlyLeaving[monthYear] = { left: 0 };
+      }
+  
+      dataRows.forEach(row => {
+        const dateStr = row[dateIndex];
+        if (dateStr) {
+          const date = parseSheetDate(dateStr);
+          if (date) {
+            const monthYear = `${months[date.getMonth()]} ${date.getFullYear()}`;
+            if (monthlyLeaving[monthYear]) {
+              monthlyLeaving[monthYear].left += 1;
+            } else {
+              monthlyLeaving[monthYear] = { left: 1 };
+            }
+          }
+        }
+      });
+  
+      // Update states
+      setLeftEmployee(dataRows.length);
+      setLeaveThisMonth(thisMonthCount);
+  
+      return { total: dataRows.length, monthlyLeaving };
+  
+    } catch (error) {
+      console.error("Error fetching leave count:", error);
+      return { total: 0, monthlyLeaving: {} };
+    }
+  };
+
+  const prepareMonthlyHiringData = (hiringData, leavingData) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentDate = new Date();
+    const result = [];
+    
+    // Get data for the last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const monthIndex = (currentDate.getMonth() - i + 12) % 12;
+      const monthYear = `${months[monthIndex]} ${currentDate.getFullYear()}`;
+      
+      result.push({
+        month: months[monthIndex],
+        hired: hiringData[monthYear]?.hired || 0,
+        left: leavingData[monthYear]?.left || 0
+      });
+    }
+    
+    return result;
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [joiningResult, leavingResult] = await Promise.all([
+          fetchJoiningCount(),
+          fetchLeaveCount()
+        ]);
+        
+        // Prepare the monthly hiring data for the chart
+        const monthlyData = prepareMonthlyHiringData(
+          joiningResult.monthlyHiring, 
+          leavingResult.monthlyLeaving
+        );
+        
+        setMonthlyHiringData(monthlyData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    
+    fetchData();
+  }, []);
 
   return (
     <div className="space-y-6 page-content p-6">
@@ -73,7 +328,7 @@ const Dashboard = () => {
           </div>
           <div>
             <p className="text-sm text-gray-600 font-medium">Total Employees</p>
-            <h3 className="text-2xl font-bold text-gray-800">135</h3>
+            <h3 className="text-2xl font-bold text-gray-800">{totalEmployee}</h3>
             <p className="text-xs text-green-600 mt-1">+12% from last month</p>
           </div>
         </div>
@@ -84,7 +339,7 @@ const Dashboard = () => {
           </div>
           <div>
             <p className="text-sm text-gray-600 font-medium">Active Employees</p>
-            <h3 className="text-2xl font-bold text-gray-800">128</h3>
+            <h3 className="text-2xl font-bold text-gray-800">{activeEmployee}</h3>
             <p className="text-xs text-green-600 mt-1">+8% from last month</p>
           </div>
         </div>
@@ -94,8 +349,8 @@ const Dashboard = () => {
             <Clock size={24} className="text-amber-600" />
           </div>
           <div>
-            <p className="text-sm text-gray-600 font-medium">On Leave</p>
-            <h3 className="text-2xl font-bold text-gray-800">7</h3>
+            <p className="text-sm text-gray-600 font-medium">On Resigned</p>
+            <h3 className="text-2xl font-bold text-gray-800">{leftEmployee}</h3>
             <p className="text-xs text-amber-600 mt-1">2 pending approvals</p>
           </div>
         </div>
@@ -106,7 +361,7 @@ const Dashboard = () => {
           </div>
           <div>
             <p className="text-sm text-gray-600 font-medium">Left This Month</p>
-            <h3 className="text-2xl font-bold text-gray-800">3</h3>
+            <h3 className="text-2xl font-bold text-gray-800">{leaveThisMonth}</h3>
             <p className="text-xs text-red-600 mt-1">2 resignations, 1 termination</p>
           </div>
         </div>
@@ -169,17 +424,19 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg border p-6">
+     
+      </div>
+       <div className="bg-white rounded-xl shadow-lg border p-6">
           <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
             <UserPlus size={20} className="mr-2" />
-            Department-wise Employee Count
+            Designation-wise Employee Count
           </h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={departmentData} layout="horizontal">
+              <BarChart data={designationData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
                 <XAxis type="number" stroke="#374151" />
-                <YAxis dataKey="department" type="category" stroke="#374151" />
+                <YAxis dataKey="designation" type="category" stroke="#374151" width={100} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: 'white', 
@@ -188,65 +445,13 @@ const Dashboard = () => {
                     color: '#374151'
                   }} 
                 />
-                <Bar dataKey="employees" fill="#6366F1" />
+                <Bar dataKey="employees" fill="#6366F1" name="Employees" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg border p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
-            <CheckCircle size={20} className="mr-2" />
-            Performance Metrics
-          </h2>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={performanceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
-                <XAxis dataKey="month" stroke="#374151" />
-                <YAxis stroke="#374151" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    color: '#374151'
-                  }} 
-                />
-                <Legend wrapperStyle={{ color: '#374151' }} />
-                <Line type="monotone" dataKey="productivity" name="Productivity %" stroke="#10B981" strokeWidth={2} />
-                <Line type="monotone" dataKey="satisfaction" name="Satisfaction %" stroke="#F59E0B" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white rounded-xl shadow-lg border p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-6">Recent HR Activities</h2>
-        <div className="space-y-4">
-          {[1, 2, 3, 4, 5].map((item) => (
-            <div key={item} className="flex items-start pb-4 border-b border-gray-200">
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
-                <CheckCircle size={20} className="text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <div className="flex justify-between">
-                  <p className="text-sm font-medium text-gray-800">New employee onboarded</p>
-                  <span className="text-xs text-gray-500">2h ago</span>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  John Doe joined as Software Developer in IT Department
-                </p>
-                <div className="mt-2 flex items-center">
-                  <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Completed</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      
     </div>
   );
 };

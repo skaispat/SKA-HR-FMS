@@ -6,38 +6,18 @@ const useAuthStore = create(
     (set) => ({
       isAuthenticated: false,
       user: null,
-      login: (username, password) => {
-        if (username === 'admin' && password === 'admin123') {
-          set({ 
-            isAuthenticated: true, 
-            user: { 
-              id: 'admin', 
-              role: 'admin', 
-              name: 'Administrator',
-              employeeId: null
-            } 
-          });
-          return true;
-        } else if (username === 'user' && password === 'user123') {
-          set({ 
-            isAuthenticated: true, 
-            user: { 
-              id: 'user', 
-              role: 'employee', 
-              name: 'Employee User',
-              employeeId: 'EMP-0001'
-            } 
-          });
-          return true;
-        }
-        return false;
+      login: (userObj) => {
+        set({ 
+          isAuthenticated: true, 
+          user: userObj 
+        });
       },
       logout: () => {
         set({ isAuthenticated: false, user: null });
       },
     }),
     {
-      name: 'hr-fms-auth-storage',
+      name: 'hr-fms-auth-storage', // persists in localStorage
     }
   )
 );

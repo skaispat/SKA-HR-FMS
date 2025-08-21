@@ -1,29 +1,218 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Filter, Search, Clock, CheckCircle } from 'lucide-react';
 import useDataStore from '../store/dataStore';
 
 const Employee = () => {
-  const { employeeData, leavingData } = useDataStore();
+//  const { employeeData, leavingData } = useDataStore();
   const [activeTab, setActiveTab] = useState('joining');
   const [searchTerm, setSearchTerm] = useState('');
+    const [joiningData, setJoiningData] = useState([]);
+    const [leavingData, setLeavingData] = useState([]);
+     const [loading, setLoading] = useState(false);
+      const [tableLoading, setTableLoading] = useState(false);
+          const [submitting, setSubmitting] = useState(false);
+       const [error, setError] = useState(null);
+
+ const formatDOB = (dateString) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString; // Return as-is if not a valid date
+    }
+    
+    const day = date.getDate();
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
+  };
+
+  const fetchJoiningData = async () => {
+  setLoading(true);
+  setTableLoading(true);
+  setError(null);
+
+  try {
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=JOINING&action=fetch'
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log('Raw JOINING API response:', result);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
+    }
+    
+    // Handle both array formats (direct data or result.data)
+    const rawData = result.data || result;
+    
+    if (!Array.isArray(rawData)) {
+      throw new Error('Expected array data not received');
+    }
+
+    // Get headers from row 6 (index 5 in 0-based array)
+    const headers = rawData[5];
+    
+    // Process data starting from row 7 (index 6)
+    const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+    
+    const getIndex = (headerName) => {
+      const index = headers.findIndex(h => 
+        h && h.toString().trim().toLowerCase() === headerName.toLowerCase()
+      );
+      if (index === -1) {
+        console.warn(`Column "${headerName}" not found in sheet`);
+      }
+      return index;
+    };
+
+    const processedData = dataRows.map(row => ({
+      employeeId: row[getIndex('Employee ID')] || '',
+      candidateName: row[getIndex('Name As Per Aadhar')] || '',
+      fatherName: row[getIndex('Father Name')] || '',
+      dateOfJoining: row[getIndex('Date Of Joining')] || '',
+      joiningPlace: row[getIndex('Joining Place')] || '',
+      designation: row[getIndex('Designation')] || '',
+      salary: row[getIndex('Salary')] || '',
+          mobileNo: row[getIndex('Mobile No.')] || '',
+        // familyMobileNo: row[getIndex('Family Mobile No.')] || '',
+        // relationWithFamily: row[getIndex('Relationship With Family Person  ')] || '',
+        //  pfId: row[getIndex('Past Pf Id No. (If Any)')] || '',
+        //  accountNo: row[getIndex('Current Bank A.C No.')] || '', 
+        //   ifscCode: row[getIndex('Ifsc Code')] || '',
+        //    branchName: row[getIndex('Branch Name')] || '',
+        //     passbookPhoto: row[getIndex('Photo Of Front Bank Passbook')] || '',
+        //      email: row[getIndex('Personal Email-Id')] || '', 
+        //   esicNo: row[getIndex('ESIC No (IF Any)')] || '',
+        //   qualification: row[getIndex('Highest Qualification')] || '',
+        //     pfEligible: row[getIndex('PF Eligible')] || '',
+        //       esicEligible: row[getIndex('ESIC Eligible')] || '',
+        //          companyName: row[getIndex('Joining Company Name')] || '',
+        //           emailToBeIssue: row[getIndex('Email ID To Be Issue')] || '',
+        // issueMobile: row[getIndex('Issue Mobile')] || '',
+        //            issueLaptop: row[getIndex('Issue Laptop')] || '',
+        //             aadharNo: row[getIndex('Aadhar Card No')] || '',
+        //                   modeOfAttendance: row[getIndex('Mode Of Attendance')] || '',
+        //                  quaficationPhoto: row[getIndex('Quafication Photo')] || '',
+        //            paymentMode: row[getIndex('Payment Mode')] || '',
+        //            salarySlip: row[getIndex('Salary Slip')] || '',
+        //            resumeCopy: row[getIndex('Resume Copy')] || '',
+        //            plannedDate: row[getIndex('Planned Date')] || '',
+        //            actual: row[getIndex('Actual')] || '',
+                    status: row[getIndex('Status')] || '',
+      // Add other fields as needed
+    }));
+
+    const joiningTasks = processedData.filter(
+  (task) => task.status === "active"  // Assuming there's a 'status' field in your data
+);
+
+setJoiningData(joiningTasks);
+   
+    
+  } catch (error) {
+    console.error('Error fetching joining data:', error);
+    setError(error.message);
+    toast.error(`Failed to load joining data: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setTableLoading(false);
+  }
+};
+
+const fetchLeavingData = async () => {
+    setLoading(true);
+    setTableLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=LEAVING&action=fetch'
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch data from LEAVING sheet');
+      }
+      
+      const rawData = result.data || result;
+      
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
+
+      // Process data starting from row 7 (index 6) - skip headers
+      const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+      
+      const processedData = dataRows.map(row => ({
+        timestamp: row[0] || '',
+        employeeId: row[1] || '',
+        name: row[2] || '',
+        dateOfLeaving: row[3] || '',
+        mobileNo: row[4] || '',
+        reasonOfLeaving: row[5] || '',
+        firmName: row[6] || '',
+        fatherName: row[7] || '', 
+        dateOfJoining: row[8] || '', 
+        workingLocation: row[9] || '', 
+        designation: row[10] || '', 
+        salary: row[11] || '', 
+        plannedDate: row[12] || '', 
+        actual: row[13] || ''
+      }));
+
+    
+      setLeavingData(processedData);
+      
+      // const historyTasks = processedData.filter(
+      //   task => task.plannedDate && task.actual
+      // );
+      // setHistoryData(historyTasks);
+     
+    } catch (error) {
+      console.error('Error fetching leaving data:', error);
+      setError(error.message);
+      toast.error(`Failed to load leaving data: ${error.message}`);
+    } finally {
+      setLoading(false);
+      setTableLoading(false);
+    }
+  };
+
+useEffect(() => {
+ 
+  fetchJoiningData(); // Add this line
+  fetchLeavingData()
+}, []);
 
   // Active employees (not in leaving data)
-  const joiningEmployees = employeeData.filter(employee => 
-    !leavingData.some(leaving => leaving.employeeId === employee.employeeId)
-  );
+  // const joiningEmployees = employeeData.filter(employee => 
+  //   !leavingData.some(leaving => leaving.employeeId === employee.employeeId)
+  // );
 
-  // Employees who have left
-  const leavingEmployees = leavingData;
+  // // Employees who have left
+  // const leavingEmployees = leavingData;
 
-  const filteredJoiningData = joiningEmployees.filter(item => {
-    const matchesSearch = item.nameAsPerAadhar?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredJoiningData = joiningData.filter(item => {
+    const matchesSearch = item.candidateName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.employeeId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.designation?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
 
-  const filteredLeavingData = leavingEmployees.filter(item => {
-    const matchesSearch = item.nameAsPerAadhar?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredLeavingData = leavingData.filter(item => {
+    const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.employeeId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.designation?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
@@ -85,7 +274,7 @@ const Employee = () => {
           {activeTab === 'joining' && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-white ">
-                <thead className="bg-white ">
+                <thead className="bg-gray-100 ">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -98,14 +287,35 @@ const Employee = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white ">
-                  {filteredJoiningData.map((item) => (
-                    <tr key={item.id} className="hover:bg-white hover:bg-opacity-5">
+                  {tableLoading ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <div className="flex justify-center flex-col items-center">
+                        <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
+                        <span className="text-gray-600 text-sm">Loading pending calls...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <p className="text-red-500">Error: {error}</p>
+                      <button 
+                        onClick={fetchLeavingData}
+                        className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                      >
+                        Retry
+                      </button>
+                    </td>
+                  </tr>
+                ):filteredJoiningData.map((item,index) => (
+                    <tr key={index} className="hover:bg-white hover:bg-opacity-5">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.nameAsPerAadhar}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.candidateName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.dateOfJoining ? new Date(item.dateOfJoining).toLocaleDateString() : '-'}
+                        {item.dateOfJoining ? formatDOB(item.dateOfJoining): '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.mobileNo || item.candidatePhone}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.mobileNo }</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.fatherName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.joiningPlace || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.designation}</td>
@@ -114,7 +324,7 @@ const Employee = () => {
                   ))}
                 </tbody>
               </table>
-              {filteredJoiningData.length === 0 && (
+              {!tableLoading &&  filteredJoiningData.length === 0 && (
                 <div className="px-6 py-12 text-center">
                   <p className="text-gray-500 ">No joining employees found.</p>
                 </div>
@@ -125,7 +335,7 @@ const Employee = () => {
           {activeTab === 'leaving' && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-white ">
-                <thead className="bg-white ">
+                <thead className="bg-gray-100 ">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -140,19 +350,40 @@ const Employee = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white ">
-                  {filteredLeavingData.map((item) => (
-                    <tr key={item.id} className="hover:bg-white ">
+                  {tableLoading ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <div className="flex justify-center flex-col items-center">
+                        <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
+                        <span className="text-gray-600 text-sm">Loading pending calls...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <p className="text-red-500">Error: {error}</p>
+                      <button 
+                        onClick={fetchLeavingData}
+                        className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                      >
+                        Retry
+                      </button>
+                    </td>
+                  </tr>
+                ):filteredLeavingData.map((item,index) => (
+                    <tr key={index} className="hover:bg-white ">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.nameAsPerAadhar}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.dateOfJoining ? new Date(item.dateOfJoining).toLocaleDateString() : '-'}
+                        {item.dateOfJoining ? formatDOB(item.dateOfJoining) : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.dateOfLeaving ? new Date(item.dateOfLeaving).toLocaleDateString() : '-'}
+                        {item.dateOfLeaving ? formatDOB(item.dateOfLeaving) : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.mobileNumber || item.mobileNo || item.candidatePhone}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.mobileNo }</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.fatherName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.joiningPlace || '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.workingLocation || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.designation}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.salary}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.reasonOfLeaving}</td>
@@ -160,7 +391,7 @@ const Employee = () => {
                   ))}
                 </tbody>
               </table>
-              {filteredLeavingData.length === 0 && (
+              {!tableLoading && filteredLeavingData.length === 0 && (
                 <div className="px-6 py-12 text-center">
                   <p className="text-gray-500 ">No leaving employees found.</p>
                 </div>

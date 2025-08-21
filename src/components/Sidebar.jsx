@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -17,31 +17,36 @@ import {
   Clock,
   LogOut as LogOutIcon,
   X,
-  User
+  User,
+  Menu
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 
 const Sidebar = ({ onClose }) => {
-  const { logout, user } = useAuthStore();
+  // const { logout, user } = useAuthStore();
   const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const userString = localStorage.getItem('user');
+  const user = userString ? JSON.parse(userString) : null;
 
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+  localStorage.removeItem('user');
+  navigate('/login', { replace: true });
+
   };
 
   const adminMenuItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/indent', icon: FileText, label: 'Indent' },
-    // { path: '/social-site', icon: Globe, label: 'Social Site' },
     { path: '/find-enquiry', icon: Search, label: 'Find Enquiry' },
     { path: '/call-tracker', icon: Phone, label: 'Call Tracker' },
     { path: '/after-joining-work', icon: UserCheck, label: 'After Joining Work' },
     { path: '/leaving', icon: UserX, label: 'Leaving' },
     { path: '/after-leaving-work', icon: UserMinus, label: 'After Leaving Work' },
     { path: '/employee', icon: Users, label: 'Employee' },
-     { path: '/leave-management', icon: Users, label: 'Leave Management' },
-      { path: '/attendance', icon: Users, label: 'Attendance' },
+    { path: '/leave-management', icon: Users, label: 'Leave Management' },
+    { path: '/attendance', icon: Users, label: 'Attendance' },
   ];
 
   const employeeMenuItems = [
@@ -53,11 +58,13 @@ const Sidebar = ({ onClose }) => {
     { path: '/company-calendar', icon: Calendar, label: 'Company Calendar' },
   ];
 
-  const menuItems = user?.role === 'admin' ? adminMenuItems : employeeMenuItems;
+  const menuItems = user?.Admin === 'Yes' ? adminMenuItems : employeeMenuItems;
 
-  return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between p-5 border-b border-indigo-800">
+const SidebarContent = ({ onClose, isCollapsed = false }) => (
+  <div className={`flex flex-col h-full ${isCollapsed ? 'w-16' : 'w-64'} bg-indigo-900 text-white`}>
+    {/* Header */}
+    <div className="flex items-center justify-between p-5 border-b border-indigo-800">
+      {!isCollapsed && (
         <h1 className="text-xl font-bold flex items-center gap-2 text-white">
           <Users size={24} />
           <span>HR FMS</span>
@@ -65,62 +72,116 @@ const Sidebar = ({ onClose }) => {
             <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Employee</span>
           )}
         </h1>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="lg:hidden p-2 rounded-md  focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-          >
-            <span className="sr-only">Close sidebar</span>
-            <X className="h-6 w-6" />
-          </button>
-        )}
-      </div>
-      
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {menuItems.map((item) => (
-          <NavLink 
-            key={item.path}
-            to={item.path} 
-            className={({ isActive }) => 
-              `flex items-center py-2.5 px-4 rounded-lg transition-colors ${
-                isActive 
-                  ? 'bg-indigo-800 text-white' 
+      )}
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+        >
+          <span className="sr-only">Close sidebar</span>
+          <X className="h-6 w-6" />
+        </button>
+      )}
+    </div>
+    
+    {/* Menu */}
+    <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+      {menuItems.map((item) => (
+        <NavLink 
+          key={item.path}
+          to={item.path} 
+          className={({ isActive }) => 
+            `flex items-center py-2.5 px-4 rounded-lg transition-colors ${
+              isActive 
+                ? 'bg-indigo-800 text-white' 
                 : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
-           }`
-            }
-            onClick={onClose}
-          >
-            <item.icon className="mr-3" size={20} />
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
-      </nav>
+            }`
+          }
+          onClick={onClose}
+        >
+          <item.icon className={isCollapsed ? 'mx-auto' : 'mr-3'} size={20} />
+          {!isCollapsed && <span>{item.label}</span>}
+        </NavLink>
+      ))}
+    </nav>
 
-      <div className="p-4 border-t border-white border-opacity-20">
-        <div className="flex items-center space-x-4 mb-4">
-         
-          <div className="flex items-center space-x-2 cursor-pointer">
-            <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center">
-              <User size={20} className="text-indigo-600" />
-            </div>
-            <div className="hidden md:block">
-              <p className="text-sm font-medium text-white">{user?.id || 'Guest'}</p>
-              <p className="text-xs text-white">{user?.role === 'admin' ? 'Administrator' : 'Maintenance Team'}</p>
-            </div>
+    {/* Footer - Always visible */}
+    <div className="p-4 border-t border-white border-opacity-20">
+      <div className="flex items-center space-x-4 mb-4">
+        <div className="flex items-center space-x-2 cursor-pointer">
+          <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center">
+            <User size={20} className="text-indigo-600" />
+          </div>
+          {/* Show user info in mobile view regardless of collapsed state */}
+        <div className={`${isCollapsed ? 'hidden' : 'block'} md:block`}>
+  <p className="text-sm font-medium text-white">{user?.Name || user?.Username || 'Guest'}</p>
+  <p className="text-xs text-white">{user?.Admin === 'Yes' ? 'Administrator' : 'Employee'}</p>
+
           </div>
         </div>
-        <button
-          onClick={() => {
-            handleLogout();
-            onClose?.();
-          }}
-          className="flex items-center py-2.5 px-4 rounded-lg text-white opacity-80 hover:bg-white hover:bg-opacity-10 hover:opacity-100 cursor-pointer transition-colors w-full"
-        >
-          <LogOutIcon className="mr-3" size={20} />
-          <span>Logout</span>
-        </button>
       </div>
+      <button
+        onClick={() => {
+          handleLogout();
+          onClose?.();
+        }}
+        className="flex items-center py-2.5 px-4 rounded-lg text-white opacity-80 hover:bg-white hover:bg-opacity-10 hover:opacity-100 cursor-pointer transition-colors w-full"
+      >
+        <LogOutIcon className={isCollapsed ? 'mx-auto' : 'mr-3'} size={20} />
+        {!isCollapsed && <span>Logout</span>}
+      </button>
     </div>
+  </div>
+);
+
+  return (
+    <>
+      {/* Mobile menu button - visible only on mobile */}
+      <button
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-indigo-900 text-white rounded-md shadow-md"
+        onClick={() => setIsOpen(true)}
+      >
+        <Menu size={24} />
+      </button>
+
+      {/* Tablet menu button - visible on tablet (hidden on mobile and desktop) */}
+      <button
+        className="hidden md:block lg:hidden fixed top-4 left-4 z-50 p-2 bg-indigo-900 text-white rounded-md shadow-md"
+        onClick={() => setIsOpen(true)}
+      >
+        <Menu size={24} />
+      </button>
+
+      {/* Desktop Sidebar - full width on desktop */}
+      <div className="hidden lg:block fixed left-0 top-0 h-full">
+        <SidebarContent />
+      </div>
+
+      {/* Tablet Sidebar - collapsible */}
+      <div className={`hidden md:block lg:hidden fixed inset-0 z-40 transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50"
+          onClick={() => setIsOpen(false)}
+        />
+        <div className={`fixed left-0 top-0 h-full z-50 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out`}>
+         <SidebarContent  />
+        </div>
+      </div>
+
+      {/* Mobile Sidebar - collapsible */}
+      <div className={`md:hidden fixed inset-0 z-40 transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50"
+          onClick={() => setIsOpen(false)}
+        />
+        <div className={`fixed left-0 top-0 h-full z-50 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out`}>
+        <SidebarContent />
+        </div>
+      </div>
+
+      {/* Add padding to main content when sidebar is open on desktop */}
+      <div className="lg:pl-64"></div>
+    </>
   );
 };
 

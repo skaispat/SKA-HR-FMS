@@ -315,6 +315,7 @@ const handleSubmit = async (e) => {
       setSubmitting(false);
     }
   };
+
   // Helper function to format date for Google Sheets
   const formatDateForSheet = (dateString) => {
     if (!dateString) return '';

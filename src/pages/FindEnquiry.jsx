@@ -1,25 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Filter, Search, Clock, CheckCircle, X, Upload } from 'lucide-react';
+import { Search, Clock, CheckCircle, X, Upload } from 'lucide-react';
 import useDataStore from '../store/dataStore';
 import toast from 'react-hot-toast';
 
 const FindEnquiry = () => {
-  const { socialSiteData, findEnquiryData, addEnquiry } = useDataStore();
   const [activeTab, setActiveTab] = useState('pending');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [indentData, setIndentData] = useState([]);
+  const [enquiryData, setEnquiryData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [generatedCandidateNo, setGeneratedCandidateNo] = useState('');
 
-
-
-
-  
   const [formData, setFormData] = useState({
     candidateName: '',
     candidateDOB: '',
@@ -39,161 +35,28 @@ const FindEnquiry = () => {
     aadharNo: ''
   });
 
-  const fetchLastCandidateNumber = async () => {
-  try {
-    const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=ENQUIRY&action=fetch'
-    );
-    
-    const result = await response.json();
-    console.log('Full sheet data:', result); // Debugging
-    
-    if (result.success && result.data && result.data.length > 1) {
-      // Find the first row with actual headers (skip empty rows)
-      let headerRowIndex = 0;
-      while (headerRowIndex < result.data.length && 
-             result.data[headerRowIndex].every(cell => !cell || cell.trim() === '')) {
-        headerRowIndex++;
-      }
-      
-      if (headerRowIndex >= result.data.length) {
-        throw new Error('No header row found in sheet');
-      }
-      
-      const headers = result.data[headerRowIndex].map(h => h ? h.trim().toLowerCase() : '');
-      console.log('Headers found:', headers);
-      
-      // Try to find the indent number column by common names
-      const possibleNames = ['Candidate Enquiry Number'];
-      let indentNumberIndex = -1;
-      
-      for (const name of possibleNames) {
-        indentNumberIndex = headers.indexOf(name);
-        if (indentNumberIndex !== -1) break;
-      }
-      
-      if (indentNumberIndex === -1) {
-        // If still not found, try to find by position (from your screenshot it's column B/index 1)
-        indentNumberIndex = 1;
-        console.warn('Using fallback column index 1 for indent number');
-      }
-      
-      // Find the last non-empty row with data
-      let lastDataRowIndex = result.data.length - 1;
-      while (lastDataRowIndex > headerRowIndex && 
-             (!result.data[lastDataRowIndex][indentNumberIndex] || 
-              result.data[lastDataRowIndex][indentNumberIndex].trim() === '')) {
-        lastDataRowIndex--;
-      }
-      
-      if (lastDataRowIndex <= headerRowIndex) {
-        return {
-          success: true,
-          lastIndentNumber: 0,
-          message: 'No data rows found'
-        };
-      }
-      
-      const lastIndentNumber = result.data[lastDataRowIndex][indentNumberIndex];
-      console.log('Last indent number found:', lastIndentNumber);
-      
-      // Extract numeric part from "REC-01" format
-      let numericValue = 0;
-      if (typeof lastIndentNumber === 'string') {
-        const match = lastIndentNumber.match(/\d+/);
-        numericValue = match ? parseInt(match[0]) : 0;
-      } else {
-        numericValue = parseInt(lastIndentNumber) || 0;
-      }
-      
-      return {
-        success: true,
-        lastIndentNumber: numericValue,
-        fullLastIndent: lastIndentNumber
-      };
-    } else {
-      return {
-        success: true,
-        lastIndentNumber: 0,
-        message: 'Sheet is empty or has no data rows'
-      };
-    }
-  } catch (error) {
-    console.error('Error in fetchLastIndentNumber:', error);
-    return {
-      success: false,
-      error: error.message,
-      lastIndentNumber: 0
-    };
-  }
-};
-
-const generateCandidateNumber = async () => {
-  try {
-    const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=ENQUIRY&action=fetch'
-    );
-    
-    const result = await response.json();
-    
-    if (result.success && result.data && result.data.length > 1) {
-      // Find the candidate number column (assuming it's the 3rd column/index 2)
-      const candidateNumberIndex = 2;
-      
-      // Find the last non-empty row with a candidate number
-      let lastRowIndex = result.data.length - 1;
-      while (lastRowIndex > 0 && 
-            (!result.data[lastRowIndex][candidateNumberIndex] || 
-             result.data[lastRowIndex][candidateNumberIndex].trim() === '')) {
-        lastRowIndex--;
-      }
-      
-      if (lastRowIndex <= 0) {
-        // If no existing numbers found, start with ENQ-01
-        return 'ENQ-01';
-      }
-      
-      const lastCandidateNumber = result.data[lastRowIndex][candidateNumberIndex];
-      console.log('Last candidate number:', lastCandidateNumber);
-      
-      // Extract the numeric part from "ENQ-01" format
-      const match = lastCandidateNumber.match(/ENQ-(\d+)/i);
-      if (match && match[1]) {
-        const lastNumber = parseInt(match[1], 10);
-        const nextNumber = lastNumber + 1;
-        return `ENQ-${String(nextNumber).padStart(2, '0')}`;
-      }
-    }
-    
-    // Fallback if anything goes wrong
-    return 'ENQ-01';
-  } catch (error) {
-    console.error('Error generating candidate number:', error);
-    return 'ENQ-01';
-  }
-};
-
-
-  const fetchIndentDataFromRow7 = async () => {
+  // Fetch all necessary data
+  const fetchAllData = async () => {
     setLoading(true);
     setTableLoading(true);
     setError(null);
+    
     try {
-      const response = await fetch(
+      // Fetch INDENT data
+      const indentResponse = await fetch(
         'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=INDENT&action=fetch'
       );
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!indentResponse.ok) {
+        throw new Error(`HTTP error! status: ${indentResponse.status}`);
       }
       
-      const result = await response.json();
+      const indentResult = await indentResponse.json();
       
-      if (result.success && result.data && result.data.length >= 7) {
-        const headers = result.data[5].map(h => h.trim());
-        const dataFromRow7 = result.data.slice(6);
+      if (indentResult.success && indentResult.data && indentResult.data.length >= 7) {
+        const headers = indentResult.data[5].map(h => h.trim());
+        const dataFromRow7 = indentResult.data.slice(6);
         
-        // Find column indices
         const getIndex = (headerName) => headers.findIndex(h => h === headerName);
         
         const processedData = dataFromRow7
@@ -207,7 +70,7 @@ const generateCandidateNumber = async () => {
                    (!actual2 || actual2 === '');
           })
           .map(row => ({
-            id: row[getIndex('Timestamp')], // Using timestamp as ID
+            id: row[getIndex('Timestamp')],
             indentNo: row[getIndex('Indent Number')],
             post: row[getIndex('Post')],
             gender: row[getIndex('Gender')],
@@ -220,42 +83,104 @@ const generateCandidateNumber = async () => {
         
         setIndentData(processedData);
       } else {
-        throw new Error(result.error || 'Not enough rows in sheet data');
+        throw new Error(indentResult.error || 'Not enough rows in INDENT sheet data');
       }
+
+      // Fetch ENQUIRY data
+      const enquiryResponse = await fetch(
+        'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec?sheet=ENQUIRY&action=fetch'
+      );
+      
+      if (!enquiryResponse.ok) {
+        throw new Error(`HTTP error! status: ${enquiryResponse.status}`);
+      }
+      
+      const enquiryResult = await enquiryResponse.json();
+      
+      if (enquiryResult.success && enquiryResult.data && enquiryResult.data.length > 0) {
+        // First row contains headers (row 6 in your sheet)
+        const headers = enquiryResult.data[5].map(h => h ? h.trim() : '');
+        const enquiryRows = enquiryResult.data.slice(6);
+        
+        const getEnquiryIndex = (headerName) => headers.findIndex(h => h === headerName);
+        
+        const processedEnquiryData = enquiryRows
+          .filter(row => row[getEnquiryIndex('Timestamp')]) // Filter out empty rows
+          .map(row => ({
+            id: row[getEnquiryIndex('Timestamp')],
+            indentNo: row[getEnquiryIndex('Indent Number')],
+            candidateEnquiryNo: row[getEnquiryIndex('Candidate Enquiry Number')],
+            applyingForPost: row[getEnquiryIndex('Applying For the Post')],
+            candidateName: row[getEnquiryIndex('Candidate Name')],
+            candidateDOB: row[getEnquiryIndex('DCB')], // DCB appears to be DOB in your sheet
+            candidatePhone: row[getEnquiryIndex('Candidate Phone Number')],
+            candidateEmail: row[getEnquiryIndex('Candidate Email')],
+            previousCompany: row[getEnquiryIndex('Previous Company Name')],
+            jobExperience: row[getEnquiryIndex('Job Experience')] || '',
+            lastSalary: row[getEnquiryIndex('Last Salary')] || '',
+            previousPosition: row[getEnquiryIndex('Previous Position')] || '',
+            reasonForLeaving: row[getEnquiryIndex('Reason For Leaving')] || '',
+            maritalStatus: row[getEnquiryIndex('Marital Status')] || '',
+            lastEmployerMobile: row[getEnquiryIndex('Last Employer Mobile')] || '',
+            candidatePhoto: row[getEnquiryIndex('Candidate Photo')] || '',
+            candidateResume: row[getEnquiryIndex('Candidate Resume')] || '',
+            referenceBy: row[getEnquiryIndex('Reference By')] || '',
+            presentAddress: row[getEnquiryIndex('Present Address')] || '',
+            aadharNo: row[getEnquiryIndex('Aadhar No')] || ''
+          }));
+        
+        setEnquiryData(processedEnquiryData);
+       // addEnquiry(processedEnquiryData);
+      } else {
+        throw new Error(enquiryResult.error || 'Not enough rows in ENQUIRY sheet data');
+      }
+      
     } catch (error) {
       console.error('Error fetching data:', error);
       setError(error.message);
-      toast.error('Failed to fetch indent data');
+      toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
       setTableLoading(false);
     }
   };
 
-// useEffect(() => {
-//   // Clear existing enquiry data when component mounts
-//   useDataStore.setState({ findEnquiryData: [] });
-  
-//   // Fetch indent data
-//   fetchIndentDataFromRow7();
-// }, []);
+  // Generate candidate number based on existing enquiries
+  const generateCandidateNumber = () => {
+    if (enquiryData.length === 0) {
+      return 'ENQ-01';
+    }
+    
+    // Find the highest existing candidate number
+    const lastNumber = enquiryData.reduce((max, enquiry) => {
+      if (!enquiry.candidateEnquiryNo) return max;
+      
+      const match = enquiry.candidateEnquiryNo.match(/ENQ-(\d+)/i);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        return num > max ? num : max;
+      }
+      return max;
+    }, 0);
+    
+    const nextNumber = lastNumber + 1;
+    return `ENQ-${String(nextNumber).padStart(2, '0')}`;
+  };
 
   useEffect(() => {
-    fetchIndentDataFromRow7();
+    fetchAllData();
   }, []);
 
   const pendingData = indentData.filter(item => 
-    !findEnquiryData.some(enquiry => enquiry.indentId === item.id)
+    !enquiryData.some(enquiry => enquiry.indentNo === item.indentNo)
   );
 
-  const historyData = findEnquiryData;
+  const historyData = enquiryData;
 
-
-
-  const handleEnquiryClick =async (item) => {
+  const handleEnquiryClick = (item) => {
     setSelectedItem(item);
-    const candidateNo = await generateCandidateNumber();
-  setGeneratedCandidateNo(candidateNo);
+    const candidateNo = generateCandidateNumber();
+    setGeneratedCandidateNo(candidateNo);
     setFormData({
       candidateName: '',
       candidateDOB: '',
@@ -277,6 +202,89 @@ const generateCandidateNumber = async () => {
     setShowModal(true);
   };
 
+  const formatDOB = (dateString) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString; // Return as-is if not a valid date
+    }
+    
+    const day = date.getDate();
+    const month = date.toLocaleString('default', { month: 'long' });
+    const year = date.getFullYear().toString().slice(-2);
+    
+    return `${day}-${month}-${year}`;
+  };
+ const now = new Date();
+    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+  setSubmitting(true);
+
+  try {
+    const now = new Date();
+    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+
+    // Create an array with all column values in order
+    const rowData = [];
+    
+    // Assign values directly to array indices
+    rowData[0] = formattedTimestamp;                   // col[0] - Timestamp
+    rowData[1] = selectedItem.indentNo;                // col[1] - Indent No
+    rowData[2] = generatedCandidateNo;                 // col[2] - Candidate No
+    rowData[3] = selectedItem.post;                    // col[3] - Post
+    rowData[4] = formData.candidateName;               // col[4] - Candidate Name
+    rowData[5] = formatDOB(formData.candidateDOB);     // col[5] - Candidate DOB
+    rowData[6] = formData.candidatePhone;              // col[6] - Candidate Phone
+    rowData[7] = formData.candidateEmail;              // col[7] - Candidate Email
+    rowData[8] = formData.previousCompany || '';       // col[8] - Previous Company
+    rowData[9] = formData.jobExperience || '';         // col[9] - Job Experience
+    rowData[10] = formData.lastSalary || '';           // col[10] - Last Salary
+    rowData[11] = formData.previousPosition || '';     // col[11] - Previous Position
+    rowData[12] = formData.reasonForLeaving || '';     // col[12] - Reason for Leaving
+    rowData[13] = formData.maritalStatus || '';        // col[13] - Marital Status
+    rowData[14] = formData.lastEmployerMobile || '';   // col[14] - Last Employer Mobile
+    rowData[15] = formData.candidatePhoto ? "Photo URL" : ""; // col[15] - Candidate Photo
+    rowData[16] = formData.referenceBy || '';          // col[16] - Reference By
+    rowData[17] = formData.presentAddress || '';       // col[17] - Present Address
+    rowData[18] = formData.aadharNo || '';             // col[18] - Aadhar No
+    rowData[19] = formData.candidateResume ? "Resume URL" : ""; // col[19] - Candidate Resume
+
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          sheetName: 'ENQUIRY',
+          action: 'insert',
+          rowData: JSON.stringify(rowData)
+        }),
+      }
+    );
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Submission failed');
+    }
+
+    toast.success('Enquiry submitted successfully!');
+    setShowModal(false);
+    // Refresh data after submission
+    fetchAllData();
+
+  } catch (error) {
+    console.error('Submission error:', error);
+    toast.error(`Error: ${error.message}`);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -285,109 +293,15 @@ const generateCandidateNumber = async () => {
     }));
   };
 
-  const handleFileChange = (e, fieldName) => {
+  const handleFileChange = (e, field) => {
     const file = e.target.files[0];
     if (file) {
       setFormData(prev => ({
         ...prev,
-        [fieldName]: file
+        [field]: file
       }));
     }
   };
-
-const formatDOB = (dateString) => {
-  if (!dateString) return '';
-  
-  const date = new Date(dateString);
-  const day = date.getDate();
-  const month = date.toLocaleString('default', { month: 'long' });
-  const year = date.getFullYear().toString().slice(-2); // Get last 2 digits of year
-  
-  return `${day}-${month}-${year}`;
-};
-
-
-const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  // Validate required fields
-  if (!formData.candidateName || !formData.candidatePhone || !formData.candidateEmail) {
-    toast.error('Please fill all required fields');
-    return;
-  }
-
-  try {
-    setSubmitting(true);
-    const now = new Date();
-    const formattedTimestamp = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
-
-    // Generate the next candidate number
-    const candidateEnquiryNo = await generateCandidateNumber();
-
-    // Prepare the submission data
-    const rowData = [
-      formattedTimestamp,
-      selectedItem.indentNo,
-      candidateEnquiryNo, // Use the generated number here
-      selectedItem?.post || '',
-      formData.candidateName,
-     formatDOB(formData.candidateDOB) ,
-      formData.candidatePhone,
-      formData.candidateEmail,
-      formData.previousCompany,
-      formData.jobExperience,
-      formData.lastSalary,
-      formData.previousPosition,
-      formData.reasonForLeaving,
-      formData.maritalStatus,
-      formData.lastEmployerMobile,
-      '', // Photo URL
-     
-      formData.referenceBy,
-      formData.presentAddress,
-      formData.aadharNo,
-       '', // Resume URL
-    ];
-
-    // Rest of your submission logic...
-    const formPayload = new URLSearchParams();
-    formPayload.append('sheetName', 'ENQUIRY');
-    formPayload.append('action', 'insert');
-    formPayload.append('rowData', JSON.stringify(rowData));
-
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzEGpaPLO-ybl9buMbgvidleJA_i56lzRiDiEPlRjf0ZhLovMWd7lX86p5ItL5NrmwYSA/exec';
-    
-    const response = await fetch(scriptUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formPayload
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    if (result && result.success) {
-      toast.success('Enquiry submitted successfully!');
-      setShowModal(false);
-      await fetchIndentDataFromRow7();
-    } else {
-      throw new Error(result?.error || 'Submission failed without error message');
-    }
-
-  } catch (error) {
-    console.error('Error submitting enquiry:', error);
-    toast.error(`Failed to submit: ${error.message}`);
-  } finally {
-    setSubmitting(false);
-  }
-};
-
-
 
   const filteredPendingData = pendingData.filter(item => {
     const matchesSearch = item.post?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -402,33 +316,6 @@ const handleSubmit = async (e) => {
     return matchesSearch;
   });
 
-  // if (loading) {
-  //   return (
-  //     <div className="flex justify-center items-center h-64">
-  //       <div className="flex flex-col items-center">
-  //         <div className="w-12 h-12 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-4"></div>
-  //         <span className="text-gray-600">Loading enquiry data...</span>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
-  // if (error) {
-  //   return (
-  //     <div className="flex justify-center items-center h-64">
-  //       <div className="text-red-500 text-center">
-  //         <p>Error loading data:</p>
-  //         <p className="font-medium">{error}</p>
-  //         <button 
-  //           onClick={fetchIndentDataFromRow7}
-  //           className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-all duration-200"
-  //         >
-  //           Retry
-  //         </button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
 
   return (
     <div className="space-y-6">
@@ -542,12 +429,12 @@ const handleSubmit = async (e) => {
 
           {activeTab === 'history' && (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y  divide-gray-200">
+              <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Indent No.</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Candidate Enquiry No.</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Applying For Post</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enquiry No.</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Post</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Candidate Name</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
@@ -569,7 +456,7 @@ const handleSubmit = async (e) => {
                   ) : filteredHistoryData.length === 0 ? (
                     <tr>
                       <td colSpan="9" className="px-6 py-12 text-center">
-                        <p className="text-gray-500 ">No enquiry history found.</p>
+                        <p className="text-gray-500">No enquiry history found.</p>
                       </td>
                     </tr>
                   ) : (
@@ -583,24 +470,28 @@ const handleSubmit = async (e) => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.candidateEmail}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.jobExperience}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {item.candidatePhoto && (
-                            <button
-                              onClick={() => window.open(item.candidatePhoto, '_blank')}
-                              className="text-gray-500 hover:text-opacity-80 text-sm underline"
+                          {item.candidatePhoto ? (
+                            <a 
+                              href={item.candidatePhoto} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-indigo-600 hover:text-indigo-800"
                             >
                               View
-                            </button>
-                          )}
+                            </a>
+                          ) : '-'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {item.candidateResume && (
-                            <button
-                              onClick={() => window.open(item.candidateResume, '_blank')}
-                              className="text-gray-500 hover:text-opacity-80 text-sm underline"
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.candidateResume ? (
+                            <a 
+                              href={item.candidateResume} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-indigo-600 hover:text-indigo-800"
                             >
                               View
-                            </button>
-                          )}
+                            </a>
+                          ) : '-'}
                         </td>
                       </tr>
                     ))

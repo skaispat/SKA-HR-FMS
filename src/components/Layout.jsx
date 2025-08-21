@@ -9,28 +9,19 @@ const Layout = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-20 bg-black bg-opacity-50 transition-opacity lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div className={`
-        fixed inset-y-0 left-0 z-30 w-64 transform bg-indigo-900 transition duration-300 ease-in-out lg:static lg:translate-x-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <Sidebar onClose={() => setSidebarOpen(false)} />
-      </div>
-
+      {/* Mobile sidebar backdrop - now handled inside Sidebar component */}
+        {/* Sidebar components - now handled inside Sidebar component */}
+      <Sidebar 
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden ">
+        {/* Header with mobile menu button */}
         {/* <Header>
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-md text-white lg:hidden hover:bg-white hover:bg-opacity-20 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+            className="p-2 rounded-md text-gray-700 md:hidden hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300"
           >
             <span className="sr-only">Open sidebar</span>
             <Menu className="h-6 w-6" />
@@ -58,6 +49,8 @@ const Layout = () => {
           </div>
         </footer>
       </div>
+
+    
     </div>
   );
 };

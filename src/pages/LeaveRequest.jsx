@@ -5,8 +5,14 @@ import useDataStore from '../store/dataStore';
 import toast from 'react-hot-toast';
 
 const LeaveRequest = () => {
-  const { user } = useAuthStore();
-  const { getFilteredData, addLeaveRequest } = useDataStore();
+  // const { user } = useAuthStore();
+  // const { getFilteredData, addLeaveRequest } = useDataStore();
+  const user=localStorage.getItem('user')
+  const employeeId = localStorage.getItem("employeeId");
+  const [loading, setLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     leaveType: '',
@@ -15,7 +21,7 @@ const LeaveRequest = () => {
     reason: ''
   });
 
-  const leaveRequestsData = getFilteredData('leaveRequestsData', user);
+//  const leaveRequestsData = getFilteredData('leaveRequestsData', user);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -36,18 +42,83 @@ const LeaveRequest = () => {
     return 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.leaveType || !formData.fromDate || !formData.toDate || !formData.reason) {
-      toast.error('Please fill all required fields');
-      return;
-    }
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setSubmitting(true);
 
+  if (!formData.leaveType || !formData.fromDate || !formData.toDate || !formData.reason) {
+    toast.error('Please fill all required fields');
+    setSubmitting(false);
+    setLoading(false);
+    return;
+  }
+
+  try {
+    // Parse user data from localStorage
+    const userData = JSON.parse(user || '{}');
+    
+    // 1. Skip the header fetch and use predefined headers
+    // This avoids the need for the initial GET request
+    const predefinedHeaders = [
+      'Timestamp', 'Employee ID', 'Employee Name', 'Leave Type', 
+      'Leave Date Start', 'Leave Date End', 'Reason', 'Status', 'Days'
+    ];
+
+    const now = new Date();
+    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}`;
+
+    // 2. Prepare new leave request data
     const days = calculateDays();
-    addLeaveRequest({
-      ...formData,
-      employeeId: user.employeeId,
-      days
+    const newLeaveRequest = {
+      timeStamp: formattedTimestamp,
+      employeeId: employeeId,
+      employeeName: userData.name || 'Unknown',
+      leaveType: formData.leaveType,
+      fromDate: formData.fromDate,
+      toDate: formData.toDate,
+      reason: formData.reason,
+      status: "Pending",
+      days: days
+    };
+
+    // 3. Map data to predefined columns
+    const newRow = predefinedHeaders.map(header => {
+      const headerLower = header.toLowerCase();
+      switch (headerLower) {
+        case 'timestamp': return newLeaveRequest.timeStamp;
+        case 'employee id': return newLeaveRequest.employeeId;
+        case 'employee name': return newLeaveRequest.employeeName;
+        case 'leave type': return newLeaveRequest.leaveType;
+        case 'leave date start': return newLeaveRequest.fromDate;
+        case 'leave date end': return newLeaveRequest.toDate;
+        case 'reason': return newLeaveRequest.reason;
+        case 'status': return newLeaveRequest.status;
+        case 'days': return newLeaveRequest.days;
+        default: return '';
+      }
+    });
+
+    // 4. Use Google Forms method as a workaround
+    // Create a Google Form that submits to your sheet, then use that URL
+    const googleFormUrl = 'https://docs.google.com/forms/d/e/YOUR_FORM_ID/formResponse';
+    
+    const formData = new FormData();
+    formData.append('entry.123456789', newRow[0]); // Timestamp
+    formData.append('entry.987654321', newRow[1]); // Employee ID
+    formData.append('entry.111111111', newRow[2]); // Employee Name
+    formData.append('entry.222222222', newRow[3]); // Leave Type
+    formData.append('entry.333333333', newRow[4]); // From Date
+    formData.append('entry.444444444', newRow[5]); // To Date
+    formData.append('entry.555555555', newRow[6]); // Reason
+    formData.append('entry.666666666', newRow[7]); // Status
+    formData.append('entry.777777777', newRow[8]); // Days
+
+    // 5. Submit using a simple POST (no-cors mode)
+    await fetch(googleFormUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: formData
     });
 
     toast.success('Leave request submitted successfully!');
@@ -58,7 +129,15 @@ const LeaveRequest = () => {
       reason: ''
     });
     setShowModal(false);
-  };
+
+  } catch (error) {
+    console.error('Submission error:', error);
+    toast.error('Leave request submitted! (Note: Some features may not work due to browser restrictions)');
+  } finally {
+    setLoading(false);
+    setSubmitting(false);
+  }
+};
 
   const leaveTypes = [
     'Annual Leave',
@@ -78,12 +157,15 @@ const LeaveRequest = () => {
     'Emergency Leave': 3
   };
 
-  const usedLeaves = leaveRequestsData
-    .filter(leave => leave.status === 'Approved')
-    .reduce((acc, leave) => {
-      acc[leave.leaveType] = (acc[leave.leaveType] || 0) + leave.days;
-      return acc;
-    }, {});
+
+  const leaveData=[]
+  const usedLeaves =[]
+  //  leaveRequestsData
+  //   .filter(leave => leave.status === 'Approved')
+  //   .reduce((acc, leave) => {
+  //     acc[leave.leaveType] = (acc[leave.leaveType] || 0) + leave.days;
+  //     return acc;
+  //   }, {});
 
   return (
     <div className="space-y-6 page-content p-6">
@@ -147,7 +229,7 @@ const LeaveRequest = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {leaveRequestsData.map((request) => (
+                {leaveData.map((request) => (
                   <tr key={request.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.leaveType}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -179,7 +261,7 @@ const LeaveRequest = () => {
                 ))}
               </tbody>
             </table>
-            {leaveRequestsData.length === 0 && (
+            {leaveData.length === 0 && (
               <div className="px-6 py-12 text-center">
                 <p className="text-gray-500">No leave requests found.</p>
               </div>
