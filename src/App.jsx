@@ -20,6 +20,10 @@ import CompanyCalendar from './pages/CompanyCalendar';
 import ProtectedRoute from './components/ProtectedRoute';
 import Attendance from './pages/Attendance';
 import LeaveManagement from './pages/LeaveManagement';
+import Attendancedaily from './pages/Attendancedaily';
+import Report from './pages/Report';
+import Payroll from './pages/Payroll';
+import MisReport from './pages/MisReport';
 
 function App() {
   return (
@@ -50,6 +54,10 @@ function App() {
             <Route path="company-calendar" element={<CompanyCalendar />} />
              <Route path="leave-management" element={<LeaveManagement />} />
               <Route path="attendance" element={<Attendance />} />
+              <Route path="attendancedaily" element={<Attendancedaily />} />
+              <Route path="report" element={<Report />} />
+              <Route path="payroll" element={<Payroll />} />
+              <Route path="misreport" element={<MisReport />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

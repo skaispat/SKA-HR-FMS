@@ -11,15 +11,36 @@ const LeaveManagement = () => {
   const [tableLoading, setTableLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedRow, setSelectedRow] = useState(null);
-  const [activeTab, setActiveTab] = useState('pending'); // Track active tab
+  const [activeTab, setActiveTab] = useState('pending');
   const [actionInProgress, setActionInProgress] = useState(null);
+  const [editableDates, setEditableDates] = useState({ from: '', to: '' });
 
-  const handleCheckboxChange = (leaveId, rowData) => {
-    if (selectedRow?.serialNo === leaveId) {
-      setSelectedRow(null);
-    } else {
-      setSelectedRow(rowData);
-    }
+const handleCheckboxChange = (leaveId, rowData) => {
+  if (selectedRow?.serialNo === leaveId) {
+    setSelectedRow(null);
+    setEditableDates({ from: '', to: '' });
+  } else {
+    // Convert DD/MM/YYYY to YYYY-MM-DD for date input
+    const formatForInput = (dateStr) => {
+      if (!dateStr) return '';
+      const [day, month, year] = dateStr.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    };
+
+    setSelectedRow(rowData);
+    setEditableDates({ 
+      from: formatForInput(rowData.startDate), 
+      to: formatForInput(rowData.endDate) 
+    });
+  }
+};
+
+
+  const handleDateChange = (field, value) => {
+    setEditableDates(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleLeaveAction = async (action) => {
@@ -28,10 +49,8 @@ const LeaveManagement = () => {
       return;
     }
 
-    console.log(`${action} leave for:`, selectedRow.employeeName);
-   
-     setActionInProgress(action); // Track which action is in progress
-  setLoading(true);
+    setActionInProgress(action);
+    setLoading(true);
     
     try {
       const fullDataResponse = await fetch(
@@ -50,6 +69,8 @@ const LeaveManagement = () => {
 
       const timestampIndex = 0;
       const employeeIdIndex = 2;
+      const startDateIndex = 4;
+      const endDateIndex = 5;
       const statusIndex = 7;
 
       const rowIndex = allData.findIndex((row, idx) => 
@@ -58,8 +79,6 @@ const LeaveManagement = () => {
       );
       
       if (rowIndex === -1) {
-        console.log("All data:", allData);
-        console.log("Searching for employeeId:", selectedRow.employeeId);
         throw new Error(`Employee ${selectedRow.employeeId} not found`);
       }
 
@@ -71,6 +90,17 @@ const LeaveManagement = () => {
       const year = today.getFullYear();
       const formattedDate = `${day}/${month}/${year}`;
       
+      // Update dates if they were changed
+    if (editableDates.from && editableDates.from !== selectedRow.startDate) {
+  const [year, month, day] = editableDates.from.split('-');
+  currentRow[startDateIndex] = `${day}/${month}/${year}`;
+}
+
+if (editableDates.to && editableDates.to !== selectedRow.endDate) {
+  const [year, month, day] = editableDates.to.split('-');
+  currentRow[endDateIndex] = `${day}/${month}/${year}`;
+}
+      
       currentRow[timestampIndex] = formattedDate;
       currentRow[statusIndex] = action === 'accept' ? 'approved' : 'rejected';
 
@@ -80,8 +110,6 @@ const LeaveManagement = () => {
         rowIndex: rowIndex + 1,
         rowData: JSON.stringify(currentRow)
       };
-
-      console.log("Update payload:", payload);
 
       const response = await fetch(
         "https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec",
@@ -99,17 +127,18 @@ const LeaveManagement = () => {
         toast.success(`Leave ${action === 'accept' ? 'approved' : 'rejected'} for ${selectedRow.employeeName || 'employee'}`);
         fetchLeaveData();
         setSelectedRow(null);
+        setEditableDates({ from: '', to: '' });
       } else {
         throw new Error(result.error || "Update failed");
       }
 
     } catch (error) {
-    console.error('Update error:', error);
-    toast.error(`Failed to ${action} leave: ${error.message}`);
-  } finally {
-    setLoading(false);
-    setActionInProgress(null); // Reset action in progress
-  }
+      console.error('Update error:', error);
+      toast.error(`Failed to ${action} leave: ${error.message}`);
+    } finally {
+      setLoading(false);
+      setActionInProgress(null);
+    }
   };
 
   const fetchLeaveData = async () => {
@@ -208,7 +237,7 @@ const LeaveManagement = () => {
   });
 
   const renderPendingLeavesTable = () => (
-    <table className="min-w-full divide-y divide-white">
+<table className="min-w-full divide-y divide-white">
       <thead className="bg-gray-100">
         <tr>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -239,67 +268,90 @@ const LeaveManagement = () => {
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeId}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeName}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {formatDate(item.startDate)}
+                {selectedRow?.serialNo === item.serialNo ? (
+                  <input
+                    type="date"
+                    value={editableDates.from}
+                    onChange={(e) => handleDateChange('from', e.target.value)}
+                    className="border rounded p-1 text-sm"
+                  />
+                ) : (
+                  formatDate(item.startDate)
+                )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {formatDate(item.endDate)}
+                {selectedRow?.serialNo === item.serialNo ? (
+                  <input
+                    type="date"
+                    value={editableDates.to}
+                    onChange={(e) => handleDateChange('to', e.target.value)}
+                    className="border rounded p-1 text-sm"
+                  />
+                ) : (
+                  formatDate(item.endDate)
+                )}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.days}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {selectedRow?.serialNo === item.serialNo ? 
+                  calculateDays(editableDates.from, editableDates.to) : 
+                  item.days
+                }
+              </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.remark}</td>
-               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.leaveType}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.leaveType}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-          <div className="flex space-x-2">
-  <button
-    onClick={() => handleLeaveAction('accept')}
-    disabled={!selectedRow || selectedRow.serialNo !== item.serialNo || loading}
-    className={`px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 min-h-[42px] flex items-center justify-center ${
-      !selectedRow || selectedRow.serialNo !== item.serialNo || loading ? 'opacity-75 cursor-not-allowed' : ''
-    }`}
-  >
-    {loading && selectedRow?.serialNo === item.serialNo && actionInProgress === 'accept' ? (
-      <div className="flex items-center">
-        <svg 
-          className="animate-spin h-4 w-4 text-white mr-2" 
-          xmlns="http://www.w3.org/2000/svg" 
-          fill="none" 
-          viewBox="0 0 24 24"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <span>Accepting...</span>
-      </div>
-    ) : 'Accept'}
-  </button>
-  <button
-    onClick={() => handleLeaveAction('rejected')}
-    disabled={selectedRow?.serialNo !== item.serialNo || loading}
-    className={`px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 min-h-[42px] flex items-center justify-center ${
-      selectedRow?.serialNo !== item.serialNo || (loading && actionInProgress === 'accept') ? 'opacity-75 cursor-not-allowed' : ''
-    }`}
-  >
-    {loading && selectedRow?.serialNo === item.serialNo && actionInProgress === 'rejected' ? (
-      <div className="flex items-center">
-        <svg 
-          className="animate-spin h-4 w-4 text-white mr-2" 
-          xmlns="http://www.w3.org/2000/svg" 
-          fill="none" 
-          viewBox="0 0 24 24"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <span>Rejecting...</span>
-      </div>
-    ) : 'Reject'}
-  </button>
-</div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleLeaveAction('accept')}
+                    disabled={!selectedRow || selectedRow.serialNo !== item.serialNo || loading}
+                    className={`px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 min-h-[42px] flex items-center justify-center ${
+                      !selectedRow || selectedRow.serialNo !== item.serialNo || loading ? 'opacity-75 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {loading && selectedRow?.serialNo === item.serialNo && actionInProgress === 'accept' ? (
+                      <div className="flex items-center">
+                        <svg 
+                          className="animate-spin h-4 w-4 text-white mr-2" 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          fill="none" 
+                          viewBox="0 0 24 24"
+                        >
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Accepting...</span>
+                      </div>
+                    ) : 'Accept'}
+                  </button>
+                  <button
+                    onClick={() => handleLeaveAction('rejected')}
+                    disabled={selectedRow?.serialNo !== item.serialNo || loading}
+                    className={`px-4 py-2 text-white bg-red-600 rounded-md hover:bg-red-700 min-h-[42px] flex items-center justify-center ${
+                      selectedRow?.serialNo !== item.serialNo || (loading && actionInProgress === 'accept') ? 'opacity-75 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {loading && selectedRow?.serialNo === item.serialNo && actionInProgress === 'rejected' ? (
+                      <div className="flex items-center">
+                        <svg 
+                          className="animate-spin h-4 w-4 text-white mr-2" 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          fill="none" 
+                          viewBox="0 0 24 24"
+                        >
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Rejecting...</span>
+                      </div>
+                    ) : 'Reject'}
+                  </button>
+                </div>
               </td>
             </tr>
           ))
         ) : (
           <tr>
-            <td colSpan="8" className="px-6 py-12 text-center">
+            <td colSpan="9" className="px-6 py-12 text-center">
               <p className="text-gray-500">No pending leave requests found.</p>
             </td>
           </tr>

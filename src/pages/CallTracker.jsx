@@ -85,36 +85,36 @@ const CallTracker = () => {
       
       const getIndex = (headerName) => headers.findIndex(h => h === headerName);
       
-      const processedData = dataFromRow7
-        .filter(row => {
-          const plannedIndex = getIndex('Planned');
-          const actualIndex = getIndex('Actual');
-          const planned = row[plannedIndex];
-          const actual = row[actualIndex];
-          return planned && (!actual || actual === '');
-        })
-        .map(row => ({
-          id: row[getIndex('Timestamp')],
-          indentNo: row[getIndex('Indent Number')],
-          candidateEnquiryNo: row[getIndex('Candidate Enquiry Number')],
-          applyingForPost: row[getIndex('Applying For the Post')],
-          candidateName: row[getIndex('Candidate Name')],
-          candidateDOB: row[getIndex('DOB')],
-          candidatePhone: row[getIndex('Candidate Phone Number')],
-          candidateEmail: row[getIndex('Candidate Email')],
-          previousCompany: row[getIndex('Previous Company Name')],
-          jobExperience: row[getIndex('Job Experience')] || '',
-          lastSalary: row[getIndex('Last Salary Drawn')] || '',
-          previousPosition: row[getIndex('Previous Position')] || '',
-          reasonForLeaving: row[getIndex('Reason Of Leaving Previous Company')] || '',
-          maritalStatus: row[getIndex('Marital Status')] || '',
-          lastEmployerMobile: row[getIndex('Last Employer Mobile Number')] || '',
-          candidatePhoto: row[getIndex('Candidate Photo')] || '',
-          candidateResume: row[getIndex('Candidate Resume')] || '',
-          referenceBy: row[getIndex('Reference By')] || '',
-          presentAddress: row[getIndex('Present Address')] || '',
-          aadharNo: row[getIndex('Aadhar Number')] || ''
-        }));
+const processedData = dataFromRow7
+  .filter(row => {
+    const plannedIndex = getIndex('Planned');
+    const actualIndex = getIndex('Actual');
+    const planned = row[plannedIndex];
+    const actual = row[actualIndex];
+    return planned && (!actual || actual === '');
+  })
+  .map(row => ({
+    id: row[getIndex('Timestamp')],
+    indentNo: row[getIndex('Indent Number')],
+    candidateEnquiryNo: row[getIndex('Candidate Enquiry Number')],
+    applyingForPost: row[getIndex('Applying For the Post')],
+    candidateName: row[getIndex('Candidate Name')],
+    candidateDOB: row[getIndex('DOB')],
+    candidatePhone: row[getIndex('Candidate Phone Number')],
+    candidateEmail: row[getIndex('Candidate Email')],
+    previousCompany: row[getIndex('Previous Company Name')],
+    jobExperience: row[getIndex('Job Experience')] || '',
+    lastSalary: row[getIndex('Last Salary Drawn')] || '',
+    previousPosition: row[getIndex('Previous Position')] || '',
+    reasonForLeaving: row[getIndex('Reason Of Leaving Previous Company')] || '',
+    maritalStatus: row[getIndex('Marital Status')] || '',
+    lastEmployerMobile: row[getIndex('Last Employer Mobile Number')] || '',
+    candidatePhoto: row[getIndex('Candidate Photo')] || '',
+    candidateResume: row[19] || '', // Column T (index 19) - Resume
+    referenceBy: row[getIndex('Reference By')] || '',
+    presentAddress: row[getIndex('Present Address')] || '',
+    aadharNo: row[getIndex('Aadhar Number')] || ''
+  }));
       
       setEnquiryData(processedData);
     } catch (error) {
@@ -655,17 +655,17 @@ const handleJoiningSubmit = async (e) => {
                           ) : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {item.candidateResume ? (
-                            <a 
-                              href={item.candidateResume} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-indigo-600 hover:text-indigo-800"
-                            >
-                              View
-                            </a>
-                          ) : '-'}
-                        </td>
+  {item.candidateResume ? (
+    <a 
+      href={item.candidateResume} 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="text-indigo-600 hover:text-indigo-800"
+    >
+      View
+    </a>
+  ) : '-'}
+</td>
                       </tr>
                     ))
                   )}

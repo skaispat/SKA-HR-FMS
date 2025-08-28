@@ -9,6 +9,7 @@ import {
   UserCheck,
   UserX,
   UserMinus,
+  AlarmClockCheck,
   Users,
   Calendar,
   DollarSign,
@@ -18,7 +19,13 @@ import {
   LogOut as LogOutIcon,
   X,
   User,
-  Menu
+  Menu,
+  ChevronDown,
+  ChevronUp,
+  NotebookPen,
+  Book,
+  BadgeDollarSign,
+  BookPlus
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 
@@ -26,6 +33,7 @@ const Sidebar = ({ onClose }) => {
   // const { logout, user } = useAuthStore();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [attendanceOpen, setAttendanceOpen] = useState(false);
 
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
@@ -45,8 +53,21 @@ const Sidebar = ({ onClose }) => {
     { path: '/leaving', icon: UserX, label: 'Leaving' },
     { path: '/after-leaving-work', icon: UserMinus, label: 'After Leaving Work' },
     { path: '/employee', icon: Users, label: 'Employee' },
-    { path: '/leave-management', icon: Users, label: 'Leave Management' },
-    { path: '/attendance', icon: Users, label: 'Attendance' },
+    { path: '/leave-management', icon: BookPlus, label: 'Leave Management' },
+    {
+      type: 'dropdown',
+      icon: Book,
+      label: 'Attendance',
+      isOpen: attendanceOpen,
+      toggle: () => setAttendanceOpen(!attendanceOpen),
+      items: [
+        { path: '/attendance', label: 'Monthly' },
+        { path: '/attendancedaily', label: 'Daily' }
+      ]
+    },
+    // { path: '/report', icon: NotebookPen, label: 'Report' },
+    { path: '/payroll', icon: BadgeDollarSign, label: 'Payroll' },
+    { path: '/misreport', icon: AlarmClockCheck, label: 'MIS Report' },
   ];
 
   const employeeMenuItems = [
@@ -85,24 +106,68 @@ const SidebarContent = ({ onClose, isCollapsed = false }) => (
     </div>
     
     {/* Menu */}
-    <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-      {menuItems.map((item) => (
-        <NavLink 
-          key={item.path}
-          to={item.path} 
-          className={({ isActive }) => 
-            `flex items-center py-2.5 px-4 rounded-lg transition-colors ${
-              isActive 
-                ? 'bg-indigo-800 text-white' 
-                : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
-            }`
-          }
-          onClick={onClose}
-        >
-          <item.icon className={isCollapsed ? 'mx-auto' : 'mr-3'} size={20} />
-          {!isCollapsed && <span>{item.label}</span>}
-        </NavLink>
-      ))}
+    <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto scrollbar-hide">
+      {menuItems.map((item) => {
+        if (item.type === 'dropdown') {
+          return (
+            <div key={item.label}>
+              <button
+                onClick={item.toggle}
+                className={`flex items-center justify-between w-full py-2.5 px-4 rounded-lg transition-colors ${
+                  item.isOpen
+                    ? 'bg-indigo-800 text-white' 
+                    : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center">
+                  <item.icon className={isCollapsed ? 'mx-auto' : 'mr-3'} size={20} />
+                  {!isCollapsed && <span>{item.label}</span>}
+                </div>
+                {!isCollapsed && (item.isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />)}
+              </button>
+              
+              {item.isOpen && !isCollapsed && (
+                <div className="ml-6 mt-1 space-y-1">
+                  {item.items.map((subItem) => (
+                    <NavLink 
+                      key={subItem.path}
+                      to={subItem.path} 
+                      className={({ isActive }) => 
+                        `flex items-center py-2 px-4 rounded-lg transition-colors ${
+                          isActive 
+                            ? 'bg-indigo-700 text-white' 
+                            : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+                        }`
+                      }
+                      onClick={onClose}
+                    >
+                      <span>{subItem.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }
+        
+        return (
+          <NavLink 
+            key={item.path}
+            to={item.path} 
+            className={({ isActive }) => 
+              `flex items-center py-2.5 px-4 rounded-lg transition-colors ${
+                isActive 
+                  ? 'bg-indigo-800 text-white' 
+                  : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
+              }`
+            }
+            onClick={onClose}
+          >
+            <item.icon className={isCollapsed ? 'mx-auto' : 'mr-3'} size={20} />
+            {!isCollapsed && <span>{item.label}</span>}
+          </NavLink>
+        );
+      })}
     </nav>
 
     {/* Footer - Always visible */}

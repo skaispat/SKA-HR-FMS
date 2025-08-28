@@ -427,29 +427,36 @@ const Dashboard = () => {
      
       </div>
        <div className="bg-white rounded-xl shadow-lg border p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
-            <UserPlus size={20} className="mr-2" />
-            Designation-wise Employee Count
-          </h2>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={designationData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
-                <XAxis type="number" stroke="#374151" />
-                <YAxis dataKey="designation" type="category" stroke="#374151" width={100} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    color: '#374151'
-                  }} 
-                />
-                <Bar dataKey="employees" fill="#6366F1" name="Employees" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+  <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
+    <UserPlus size={20} className="mr-2" />
+    Designation-wise Employee Count
+  </h2>
+  <div className="h-80">
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={designationData}>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
+        <XAxis dataKey="designation" stroke="#374151" />
+        <YAxis stroke="#374151" />
+        <Tooltip 
+          contentStyle={{ 
+            backgroundColor: 'white', 
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            color: '#374151'
+          }} 
+        />
+        <Bar dataKey="employees" name="Employees">
+          {designationData.map((entry, index) => (
+            <Cell 
+              key={`cell-${index}`} 
+              fill={index % 3 === 0 ? '#EF4444' : index % 3 === 1 ? '#10B981' : '#3B82F6'} 
+            />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  </div>
+</div>
 
       
     </div>

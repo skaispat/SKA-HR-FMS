@@ -79,7 +79,7 @@ const generateIndentNumber = async () => {
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
 
-    return `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`;
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
   };
 
   const fetchIndentDataFromRow7 = async () => {
@@ -275,7 +275,7 @@ const handleSubmit = async (e) => {
         formData.numberOfPost,
         formattedDate,
         formData.socialSite,
-        "open"
+        "NeedMore"
       ];
 
       const response = await fetch('https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec', {
@@ -498,82 +498,85 @@ const handleSubmit = async (e) => {
         </p>
       </div>
 
-        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 shadow">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Indent Number</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Post</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prefer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. of Post</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completion Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Social Site</th>
+      <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+  <div className="overflow-x-auto">
+    {/* Add max-height and overflow-y to the table container */}
+    <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+      <table className="min-w-full divide-y divide-gray-200 shadow">
+        <thead className="bg-gray-50 sticky top-0 z-10">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Indent Number</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Post</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prefer</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. of Post</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completion Date</th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Social Site</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200 bg-white">
+          {tableLoading ? (
+            <tr>
+              <td colSpan="7" className="px-6 py-12 text-center">
+                <div className="flex justify-center flex-col items-center">
+                  <div className="w-6 h-6 border-4 border-blue-500 border-dashed rounded-full animate-spin mb-2"></div>
+                  <span className="text-gray-600 text-sm">Loading indent data...</span>
+                </div>
+              </td>
+            </tr>
+          ) : indentData.length === 0 ? (
+            <tr>
+              <td colSpan="7" className="px-6 py-12 text-center">
+                <p className="text-gray-500">No indent data found.</p>
+              </td>
+            </tr>
+          ) : (
+            indentData.map((item, index) => (
+              <tr key={index} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {item.indentNumber}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.post}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.gender}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {item.prefer}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {item.noOfPost}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <div className="text-sm text-gray-900 break-words">
+                    {item.completionDate ? (() => {
+                      const date = new Date(item.completionDate);
+                      if (!date || isNaN(date.getTime())) return "Invalid date";
+                      const day = date.getDate().toString().padStart(2, '0');
+                      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                      const year = date.getFullYear();
+                      const hours = date.getHours().toString().padStart(2, '0');
+                      const minutes = date.getMinutes().toString().padStart(2, '0');
+                      const seconds = date.getSeconds().toString().padStart(2, '0');
+                      return (
+                        <div>
+                          <div className="font-medium break-words">
+                            {`${day}/${month}/${year}`}
+                          </div>
+                          <div className="text-xs text-gray-500 break-words">
+                            {`${hours}:${minutes}:${seconds}`}
+                          </div>
+                        </div>
+                      );
+                    })() : "—"}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.socialSite}</td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {tableLoading ? (
-                <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center">
-                    <div className="flex justify-center flex-col items-center">
-                      <div className="w-6 h-6 border-4 border-blue-500 border-dashed rounded-full animate-spin mb-2"></div>
-                      <span className="text-gray-600 text-sm">Loading indent data...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : indentData.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="px-6 py-12 text-center">
-                    <p className="text-gray-500">No indent data found.</p>
-                  </td>
-                </tr>
-              ) : (
-                indentData.map((item, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {item.indentNumber}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.post}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.gender}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.prefer}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.noOfPost}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="text-sm text-gray-900 break-words">
-                        {item.completionDate ? (() => {
-                          const date = new Date(item.completionDate);
-                          if (!date || isNaN(date.getTime())) return "Invalid date";
-                          const day = date.getDate().toString().padStart(2, '0');
-                          const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                          const year = date.getFullYear();
-                          const hours = date.getHours().toString().padStart(2, '0');
-                          const minutes = date.getMinutes().toString().padStart(2, '0');
-                          const seconds = date.getSeconds().toString().padStart(2, '0');
-                          return (
-                            <div>
-                              <div className="font-medium break-words">
-                                {`${day}/${month}/${year}`}
-                              </div>
-                              <div className="text-xs text-gray-500 break-words">
-                                {`${hours}:${minutes}:${seconds}`}
-                              </div>
-                            </div>
-                          );
-                        })() : "—"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.socialSite}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
     </div>
   );

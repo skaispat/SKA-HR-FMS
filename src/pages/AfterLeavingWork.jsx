@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
-import useDataStore from '../store/dataStore';
 import toast from 'react-hot-toast';
 
 const AfterLeavingWork = () => {
-  const { leavingData } = useDataStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -77,10 +75,10 @@ const AfterLeavingWork = () => {
       );
       setPendingData(pendingTasks);
       
-      // const historyTasks = processedData.filter(
-      //   task => task.plannedDate && task.actual
-      // );
-      // setHistoryData(historyTasks);
+      const historyTasks = processedData.filter(
+        task => task.plannedDate && task.actual
+      );
+      setHistoryData(historyTasks);
      
     } catch (error) {
       console.error('Error fetching leaving data:', error);
@@ -96,8 +94,8 @@ const AfterLeavingWork = () => {
     fetchLeavingData();
   }, []);
 
-  const handleAfterLeavingClick = (item) => {
-    setSelectedItem(item);
+  const handleAfterLeavingClick = async (item) => {
+    // Reset form data first to prevent previous state from showing
     setFormData({
       resignationLetterReceived: false,
       resignationAcceptance: false,
@@ -109,7 +107,100 @@ const AfterLeavingWork = () => {
       finalReleaseDate: '',
       removeBenefitEnrollment: false
     });
+    
+    setSelectedItem(item);
     setShowModal(true);
+    setLoading(true);
+
+    try {
+      // Fetch current values from the sheet
+      const fullDataResponse = await fetch(
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=LEAVING&action=fetch'
+      );
+      
+      if (!fullDataResponse.ok) {
+        throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
+      }
+      
+      const fullDataResult = await fullDataResponse.json();
+      const allData = fullDataResult.data || fullDataResult;
+
+      // Find header row
+      let headerRowIndex = allData.findIndex(row =>
+        row.some(cell => cell?.toString().trim().toLowerCase().includes('employee id'))
+      );
+      if (headerRowIndex === -1) headerRowIndex = 4;
+
+      const headers = allData[headerRowIndex].map(h => h?.toString().trim());
+
+      // Find Employee ID column index
+      const employeeIdIndex = headers.findIndex(h => h?.toLowerCase() === "employee id");
+      if (employeeIdIndex === -1) {
+        throw new Error("Could not find 'Employee ID' column");
+      }
+
+      // Find the employee row index
+      const rowIndex = allData.findIndex((row, idx) =>
+        idx > headerRowIndex &&
+        row[employeeIdIndex]?.toString().trim() === item.employeeId?.toString().trim()
+      );
+      
+      if (rowIndex === -1) {
+        throw new Error(`Employee ${item.employeeId} not found in LEAVING sheet`);
+      }
+
+      // Get current values from the sheet
+      // Column W is index 22 (0-based)
+      const finalReleaseDateValue = allData[rowIndex][22] || "";
+      
+      // Format the date for the input field (YYYY-MM-DD format)
+      let formattedDate = "";
+      if (finalReleaseDateValue) {
+        // Try to parse the date if it's in a different format
+        const dateParts = finalReleaseDateValue.toString().split('/');
+        if (dateParts.length === 3) {
+          // Assuming DD/MM/YYYY format
+          const day = dateParts[0].padStart(2, '0');
+          const month = dateParts[1].padStart(2, '0');
+          const year = dateParts[2];
+          formattedDate = `${year}-${month}-${day}`;
+        } else {
+          // Try to parse as a Date object if it's in a different format
+          const dateObj = new Date(finalReleaseDateValue);
+          if (!isNaN(dateObj.getTime())) {
+            formattedDate = dateObj.toISOString().split('T')[0];
+          }
+        }
+      }
+
+      const currentValues = {
+        resignationLetterReceived: 
+          allData[rowIndex][15]?.toString().trim().toLowerCase() === "yes",
+        resignationAcceptance: 
+          allData[rowIndex][16]?.toString().trim().toLowerCase() === "yes",
+        handoverOfAssets: 
+          allData[rowIndex][17]?.toString().trim().toLowerCase() === "yes",
+        idCard: 
+          allData[rowIndex][18]?.toString().trim().toLowerCase() === "yes",
+        visitingCard: 
+          allData[rowIndex][19]?.toString().trim().toLowerCase() === "yes",
+        cancellationOfEmailId: 
+          allData[rowIndex][20]?.toString().trim().toLowerCase() === "yes",
+        biometricAccess: 
+          allData[rowIndex][21]?.toString().trim().toLowerCase() === "yes",
+        finalReleaseDate: formattedDate,
+        removeBenefitEnrollment: 
+          allData[rowIndex][23]?.toString().trim().toLowerCase() === "yes"
+      };
+
+      setFormData(currentValues);
+    } catch (error) {
+      console.error('Error fetching current values:', error);
+      // Keep the default reset values if there's an error
+      toast.error("Failed to load current values");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCheckboxChange = (name) => {
@@ -127,7 +218,183 @@ const AfterLeavingWork = () => {
     }));
   };
 
- const formatDOB = (dateString) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setSubmitting(true);
+
+    if (!selectedItem.employeeId || !selectedItem.name) {
+      toast.error('Please fill all required fields');
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      // 1. First fetch the current data
+      const fullDataResponse = await fetch(
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=LEAVING&action=fetch'
+      );
+      if (!fullDataResponse.ok) {
+        throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
+      }
+
+      const fullDataResult = await fullDataResponse.json();
+      const allData = fullDataResult.data || fullDataResult;
+
+      // Find header row in LEAVING sheet
+      let headerRowIndex = allData.findIndex(row =>
+        row.some(cell => cell?.toString().trim().toLowerCase().includes('employee id'))
+      );
+      if (headerRowIndex === -1) headerRowIndex = 4;
+
+      const headers = allData[headerRowIndex].map(h => h?.toString().trim());
+
+      // Find Employee ID column index
+      const employeeIdIndex = headers.findIndex(h => h?.toLowerCase() === "employee id");
+      if (employeeIdIndex === -1) {
+        throw new Error("Could not find 'Employee ID' column");
+      }
+
+      // Find the employee row index
+      const rowIndex = allData.findIndex((row, idx) =>
+        idx > headerRowIndex &&
+        row[employeeIdIndex]?.toString().trim() === selectedItem.employeeId?.toString().trim()
+      );
+      if (rowIndex === -1) throw new Error(`Employee ${selectedItem.employeeId} not found in LEAVING sheet`);
+
+      const now = new Date();
+      const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} `;
+      
+      // Check if all conditions are met
+      const allConditionsMet = 
+        formData.resignationLetterReceived &&
+        formData.resignationAcceptance &&
+        formData.handoverOfAssets &&
+        formData.idCard &&
+        formData.visitingCard &&
+        formData.cancellationOfEmailId &&
+        formData.biometricAccess &&
+        formData.removeBenefitEnrollment &&
+        formData.finalReleaseDate;
+
+      const updatePromises = [];
+
+      // Only update actual date if all conditions are met
+      if (allConditionsMet) {
+        updatePromises.push(
+          fetch(
+            "https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: new URLSearchParams({
+                sheetName: "LEAVING",
+                action: "updateCell",
+                rowIndex: (rowIndex + 1).toString(),
+                columnIndex: "14", // Column N (Actual date)
+                value: formattedTimestamp,
+              }).toString(),
+            }
+          )
+        );
+      }
+
+      // Update checklist columns regardless of allConditionsMet
+      const fields = [
+        { value: formData.resignationLetterReceived ? "Yes" : "No", offset: 15 },
+        { value: formData.resignationAcceptance ? "Yes" : "No", offset: 16 },
+        { value: formData.handoverOfAssets ? "Yes" : "No", offset: 17 },
+        { value: formData.idCard ? "Yes" : "No", offset: 18 },
+        { value: formData.visitingCard ? "Yes" : "No", offset: 19 },
+        { value: formData.cancellationOfEmailId ? "Yes" : "No", offset: 20 },
+        { value: formData.biometricAccess ? "Yes" : "No", offset: 21 },
+        { value: formData.removeBenefitEnrollment ? "Yes" : "No", offset: 23 }
+      ];
+
+      // Convert final release date to DD/MM/YYYY
+      let finalReleaseDateValue = "";
+      if (formData.finalReleaseDate) {
+        const dateParts = formData.finalReleaseDate.split('-');
+        if (dateParts.length === 3) {
+          finalReleaseDateValue = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+        } else {
+          finalReleaseDateValue = formData.finalReleaseDate;
+        }
+      }
+
+      // Add final release date update
+      updatePromises.push(
+        fetch(
+          "https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              sheetName: "LEAVING",
+              action: "updateCell",
+              rowIndex: (rowIndex + 1).toString(),
+              columnIndex: "23", // Column W (Final Release Date)
+              value: finalReleaseDateValue,
+            }).toString(),
+          }
+        )
+      );
+
+      // Add all other field updates
+      fields.forEach((field) => {
+        updatePromises.push(
+          fetch(
+            "https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: new URLSearchParams({
+                sheetName: "LEAVING",
+                action: "updateCell",
+                rowIndex: (rowIndex + 1).toString(),
+                columnIndex: (field.offset + 1).toString(),
+                value: field.value,
+              }).toString(),
+            }
+          )
+        );
+      });
+
+      const responses = await Promise.all(updatePromises);
+      const results = await Promise.all(responses.map((r) => r.json()));
+
+      const hasError = results.some((result) => !result.success);
+      if (hasError) {
+        console.error("Some cell updates failed:", results);
+        throw new Error("Some cell updates failed");
+      }
+
+      if (allConditionsMet) {
+        toast.success("All conditions met! Actual date updated successfully.");
+      } else {
+        toast.success(
+          "Conditions updated successfully. Actual date will be updated when all conditions are met."
+        );
+      }
+
+      setShowModal(false);
+      fetchLeavingData();
+    } catch (error) {
+      console.error('Update error:', error);
+      toast.error(`Update failed: ${error.message}`);
+    } finally {
+      setLoading(false);
+      setSubmitting(false);
+    }
+  };
+
+  const formatDOB = (dateString) => {
     if (!dateString) return '';
     
     const date = new Date(dateString);
@@ -141,184 +408,6 @@ const AfterLeavingWork = () => {
     
     return `${day}/${month}/${year}`;
   };
-
-
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setSubmitting(true);
-
-  if (!selectedItem.employeeId || !selectedItem.name) {
-    toast.error('Please fill all required fields');
-    setSubmitting(false);
-    return;
-  }
-
-  try {
-    // 1. First update the LEAVING sheet
-    const fullDataResponse = await fetch(
-      'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=LEAVING&action=fetch'
-    );
-    if (!fullDataResponse.ok) {
-      throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
-    }
-
-    const fullDataResult = await fullDataResponse.json();
-    const allData = fullDataResult.data || fullDataResult;
-
-    // Find header row in LEAVING sheet
-    let headerRowIndex = allData.findIndex(row =>
-      row.some(cell => cell?.toString().trim().toLowerCase().includes('employee id'))
-    );
-    if (headerRowIndex === -1) headerRowIndex = 4;
-
-    const headers = allData[headerRowIndex].map(h => h?.toString().trim());
-
-    // Find Employee ID column index
-    const employeeIdIndex = headers.findIndex(h => h?.toLowerCase() === "employee id");
-    if (employeeIdIndex === -1) {
-      throw new Error("Could not find 'Employee ID' column");
-    }
-
-    // Find the employee row index
-    const rowIndex = allData.findIndex((row, idx) =>
-      idx > headerRowIndex &&
-      row[employeeIdIndex]?.toString().trim() === selectedItem.employeeId?.toString().trim()
-    );
-    if (rowIndex === -1) throw new Error(`Employee ${selectedItem.employeeId} not found in LEAVING sheet`);
-
-    // Get a copy of the existing row
-    let currentRow = [...allData[rowIndex]];
-    const now = new Date();
-    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} `;
-    
-    // Apply updates to LEAVING sheet
-    currentRow[13] = formattedTimestamp;
-    currentRow[15] = formData.resignationLetterReceived ? "Yes" : "No";
-    currentRow[16] = formData.resignationAcceptance ? "Yes" : "No";
-    currentRow[17] = formData.handoverOfAssets ? "Yes" : "No";
-    currentRow[18] = formData.idCard ? "Yes" : "No";
-    currentRow[19] = formData.visitingCard ? "Yes" : "No";
-    currentRow[20] = formData.cancellationOfEmailId ? "Yes" : "No";
-    currentRow[21] = formData.biometricAccess ? "Yes" : "No";
-    currentRow[22] = formatDOB(formData.finalReleaseDate) || "";
-    currentRow[23] = formData.removeBenefitEnrollment ? "Yes" : "No";
-
-    // Prepare payload for LEAVING sheet
-    const leavingPayload = {
-      sheetName: "LEAVING",
-      action: "update",
-      rowIndex: rowIndex + 1,
-      rowData: JSON.stringify(currentRow)
-    };
-
-    // Send update request to LEAVING sheet
-    const leavingResponse = await fetch(
-      "https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams(leavingPayload).toString(),
-      }
-    );
-
-    const leavingResult = await leavingResponse.json();
-    console.log("LEAVING Update result:", leavingResult);
-
-    if (!leavingResult.success) {
-      throw new Error(leavingResult.error || "Failed to update LEAVING sheet");
-    }
-
-    // 2. Now update the JOINING sheet to set status to Inactive
-    const joiningResponse = await fetch(
-      'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=JOINING&action=fetch'
-    );
-    
-    if (!joiningResponse.ok) {
-      throw new Error(`HTTP error! status: ${joiningResponse.status}`);
-    }
-
-    const joiningResult = await joiningResponse.json();
-    const joiningData = joiningResult.data || joiningResult;
-
-    // Find header row in JOINING sheet
-    let joiningHeaderRowIndex = joiningData.findIndex(row =>
-      row.some(cell => cell?.toString().trim().toLowerCase().includes('employee id'))
-    );
-    if (joiningHeaderRowIndex === -1) joiningHeaderRowIndex = 4;
-
-    const joiningHeaders = joiningData[joiningHeaderRowIndex].map(h => h?.toString().trim());
-
-    // Find Employee ID column index in JOINING sheet
-    const joiningEmployeeIdIndex = joiningHeaders.findIndex(h => h?.toLowerCase() === "employee id");
-    if (joiningEmployeeIdIndex === -1) {
-      throw new Error("Could not find 'Employee ID' column in JOINING sheet");
-    }
-
-    // Find Status column index in JOINING sheet
-    const statusColumnIndex = joiningHeaders.findIndex(h => h?.toLowerCase().includes('status'));
-    if (statusColumnIndex === -1) {
-      throw new Error("Could not find 'Status' column in JOINING sheet");
-    }
-
-    // Find the employee row index in JOINING sheet
-    const joiningRowIndex = joiningData.findIndex((row, idx) =>
-      idx > joiningHeaderRowIndex &&
-      row[joiningEmployeeIdIndex]?.toString().trim() === selectedItem.employeeId?.toString().trim()
-    );
-    
-    if (joiningRowIndex === -1) {
-      throw new Error(`Employee ${selectedItem.employeeId} not found in JOINING sheet`);
-    }
-
-    // Get a copy of the existing row in JOINING sheet
-    let joiningCurrentRow = [...joiningData[joiningRowIndex]];
-    
-    // Update status to "Inactive"
-    joiningCurrentRow[53] = "inactive";
-
-    // Prepare payload for JOINING sheet
-    const joiningPayload = {
-      sheetName: "JOINING",
-      action: "update",
-      rowIndex: joiningRowIndex + 1,
-      rowData: JSON.stringify(joiningCurrentRow)
-    };
-
-    // Send update request to JOINING sheet
-    const joiningUpdateResponse = await fetch(
-      "https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams(joiningPayload).toString(),
-      }
-    );
-
-    const joiningUpdateResult = await joiningUpdateResponse.json();
-    console.log("JOINING Update result:", joiningUpdateResult);
-
-    if (!joiningUpdateResult.success) {
-      throw new Error(joiningUpdateResult.error || "Failed to update JOINING sheet");
-    }
-
-    toast.success('After leaving work updated successfully and employee status set to Inactive!');
-    setShowModal(false);
-    setSelectedItem(null);
-    fetchLeavingData(); // Refresh data
-
-  } catch (error) {
-    console.error('Update error:', error);
-    toast.error(`Update failed: ${error.message}`);
-  } finally {
-    setLoading(false);
-    setSubmitting(false);
-  }
-};
 
   const filteredPendingData = pendingData.filter(item => {
     const matchesSearch = item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||

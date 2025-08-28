@@ -15,6 +15,8 @@ const FindEnquiry = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [generatedCandidateNo, setGeneratedCandidateNo] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingResume, setUploadingResume] = useState(false);
 
   const [formData, setFormData] = useState({
     candidateName: '',
@@ -32,8 +34,12 @@ const FindEnquiry = () => {
     candidateResume: null,
     referenceBy: '',
     presentAddress: '',
-    aadharNo: ''
+    aadharNo: '',
+    status: 'NeedMore'
   });
+
+  // Google Drive folder ID for file uploads
+  const GOOGLE_DRIVE_FOLDER_ID = '1AXxD0msg8dSuMxoUH7KrmJ7LjuTPKUK6';
 
   // Fetch all necessary data
   const fetchAllData = async () => {
@@ -65,7 +71,7 @@ const FindEnquiry = () => {
             const planned2 = row[getIndex('Planned 2')];
             const actual2 = row[getIndex('Actual 2')];
             
-            return status === 'open' && 
+            return status === 'NeedMore' && 
                    planned2 && 
                    (!actual2 || actual2 === '');
           })
@@ -78,10 +84,15 @@ const FindEnquiry = () => {
             numberOfPost: row[getIndex('Number Of Posts')],
             competitionDate: row[getIndex('Completion Date')],
             socialSite: row[getIndex('Social Site')],
-            status: row[getIndex('Status')]
+            status: row[getIndex('Status')],
+            plannedDate: row[getIndex('Planned 2')],
+            actual: row[getIndex('Actual 2')]
           }));
-        
-        setIndentData(processedData);
+         const pendingTasks = processedData.filter(
+        task => task.plannedDate && !task.actual
+      );
+      
+        setIndentData(pendingTasks);
       } else {
         throw new Error(indentResult.error || 'Not enough rows in INDENT sheet data');
       }
@@ -167,13 +178,58 @@ const FindEnquiry = () => {
     return `ENQ-${String(nextNumber).padStart(2, '0')}`;
   };
 
+  // Convert file to base64
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  // Upload file to Google Drive
+  const uploadFileToGoogleDrive = async (file, type) => {
+    try {
+      const base64Data = await fileToBase64(file);
+      
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            action: 'uploadFile',
+            base64Data: base64Data,
+            fileName: `${generatedCandidateNo}_${type}_${file.name}`,
+            mimeType: file.type,
+            folderId: GOOGLE_DRIVE_FOLDER_ID
+          }),
+        }
+      );
+
+      const result = await response.json();
+      
+      if (result.success) {
+        return result.fileUrl;
+      } else {
+        throw new Error(result.error || 'File upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     fetchAllData();
   }, []);
 
-  const pendingData = indentData.filter(item => 
-    !enquiryData.some(enquiry => enquiry.indentNo === item.indentNo)
-  );
+  // const pendingData = indentData.filter(item => 
+  //   !enquiryData.some(enquiry => enquiry.indentNo === item.indentNo)
+  // );
 
   const historyData = enquiryData;
 
@@ -197,7 +253,8 @@ const FindEnquiry = () => {
       candidateResume: null,
       referenceBy: '',
       presentAddress: '',
-      aadharNo: ''
+      aadharNo: '',
+      status: 'NeedMore'
     });
     setShowModal(true);
   };
@@ -216,43 +273,61 @@ const FindEnquiry = () => {
     
     return `${day}-${month}-${year}`;
   };
- const now = new Date();
-    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault();
   setSubmitting(true);
 
   try {
+    let photoUrl = '';
+    let resumeUrl = '';
+
+    // Upload photo if exists
+    if (formData.candidatePhoto) {
+      setUploadingPhoto(true);
+      photoUrl = await uploadFileToGoogleDrive(formData.candidatePhoto, 'photo');
+      setUploadingPhoto(false);
+      toast.success('Photo uploaded successfully!');
+    }
+
+    // Upload resume if exists
+    if (formData.candidateResume) {
+      setUploadingResume(true);
+      resumeUrl = await uploadFileToGoogleDrive(formData.candidateResume, 'resume');
+      setUploadingResume(false);
+      toast.success('Resume uploaded successfully!');
+    }
+
     const now = new Date();
     const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
 
-    // Create an array with all column values in order
-    const rowData = [];
-    
-    // Assign values directly to array indices
-    rowData[0] = formattedTimestamp;                   // col[0] - Timestamp
-    rowData[1] = selectedItem.indentNo;                // col[1] - Indent No
-    rowData[2] = generatedCandidateNo;                 // col[2] - Candidate No
-    rowData[3] = selectedItem.post;                    // col[3] - Post
-    rowData[4] = formData.candidateName;               // col[4] - Candidate Name
-    rowData[5] = formatDOB(formData.candidateDOB);     // col[5] - Candidate DOB
-    rowData[6] = formData.candidatePhone;              // col[6] - Candidate Phone
-    rowData[7] = formData.candidateEmail;              // col[7] - Candidate Email
-    rowData[8] = formData.previousCompany || '';       // col[8] - Previous Company
-    rowData[9] = formData.jobExperience || '';         // col[9] - Job Experience
-    rowData[10] = formData.lastSalary || '';           // col[10] - Last Salary
-    rowData[11] = formData.previousPosition || '';     // col[11] - Previous Position
-    rowData[12] = formData.reasonForLeaving || '';     // col[12] - Reason for Leaving
-    rowData[13] = formData.maritalStatus || '';        // col[13] - Marital Status
-    rowData[14] = formData.lastEmployerMobile || '';   // col[14] - Last Employer Mobile
-    rowData[15] = formData.candidatePhoto ? "Photo URL" : ""; // col[15] - Candidate Photo
-    rowData[16] = formData.referenceBy || '';          // col[16] - Reference By
-    rowData[17] = formData.presentAddress || '';       // col[17] - Present Address
-    rowData[18] = formData.aadharNo || '';             // col[18] - Aadhar No
-    rowData[19] = formData.candidateResume ? "Resume URL" : ""; // col[19] - Candidate Resume
+    const rowData = [
+      formattedTimestamp,                           // Column A: Timestamp
+      selectedItem.indentNo,                        // Column B: Indent Number
+      generatedCandidateNo,                         // Column C: Candidate Enquiry Number
+      selectedItem.post,                            // Column D: Applying For the Post
+      formData.candidateName,                       // Column E: Candidate Name
+      formatDOB(formData.candidateDOB),            // Column F: DCB (DOB)
+      formData.candidatePhone,                      // Column G: Candidate Phone Number
+      formData.candidateEmail,                      // Column H: Candidate Email
+      formData.previousCompany || '',               // Column I: Previous Company Name
+      formData.jobExperience || '',                 // Column J: Job Experience
+      formData.lastSalary || '',                    // Column K: Last Salary
+      formData.previousPosition || '',              // Column L: Previous Position
+      formData.reasonForLeaving || '',              // Column M: Reason For Leaving
+      formData.maritalStatus || '',                 // Column N: Marital Status
+      formData.lastEmployerMobile || '',            // Column O: Last Employer Mobile
+      photoUrl,                                     // Column P: Candidate Photo (URL)
+      formData.referenceBy || '',                   // Column Q: Reference By
+      formData.presentAddress || '',                // Column R: Present Address
+      formData.aadharNo || '',                      // Column S: Aadhar No
+      resumeUrl,                                    // Column T: Candidate Resume (URL)
+    ];
 
-    const response = await fetch(
+    console.log('Submitting to ENQUIRY sheet:', rowData);
+
+    // Submit to ENQUIRY sheet
+    const enquiryResponse = await fetch(
       'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec',
       {
         method: 'POST',
@@ -267,14 +342,121 @@ const FindEnquiry = () => {
       }
     );
 
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error(result.error || 'Submission failed');
+    const enquiryResult = await enquiryResponse.json();
+    console.log('ENQUIRY response:', enquiryResult);
+
+    if (!enquiryResult.success) {
+      throw new Error(enquiryResult.error || 'ENQUIRY submission failed');
     }
 
-    toast.success('Enquiry submitted successfully!');
+    // Only update INDENT sheet if status is Complete
+    if (formData.status === 'Complete') {
+      console.log('Updating INDENT sheet for status Complete');
+      
+      // Fetch INDENT data
+      const indentFetchResponse = await fetch(
+        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=INDENT&action=fetch'
+      );
+      
+      const indentData = await indentFetchResponse.json();
+      console.log('INDENT data fetched:', indentData);
+
+      if (!indentData.success) {
+        throw new Error('Failed to fetch INDENT data: ' + (indentData.error || 'Unknown error'));
+      }
+
+      // Find the row index
+      let rowIndex = -1;
+      for (let i = 1; i < indentData.data.length; i++) {
+        if (indentData.data[i][1] === selectedItem.indentNo) {
+          rowIndex = i + 1; // Spreadsheet rows start at 1
+          break;
+        }
+      }
+
+      if (rowIndex === -1) {
+        throw new Error(`Could not find indentNo: ${selectedItem.indentNo} in INDENT sheet`);
+      }
+
+      console.log('Found row index:', rowIndex);
+
+      // Get headers
+      const headers = indentData.data[5];
+      console.log('Headers:', headers);
+
+      // Find column indices
+      const getColumnIndex = (columnName) => {
+        return headers.findIndex(h => h && h.toString().trim() === columnName);
+      };
+
+      const statusIndex = getColumnIndex('Status');
+      const actual2Index = getColumnIndex('Actual 2');
+
+      console.log('Status column index:', statusIndex);
+      console.log('Actual 2 column index:', actual2Index);
+
+      // Update Status column
+      if (statusIndex !== -1) {
+        console.log('Updating Status column...');
+        const statusResponse = await fetch(
+          'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              sheetName: 'INDENT',
+              action: 'updateCell',
+              rowIndex: rowIndex.toString(),
+              columnIndex: (statusIndex + 1).toString(), // Convert to string
+              value: 'Complete'
+            }),
+          }
+        );
+
+        const statusResult = await statusResponse.json();
+        console.log('Status update result:', statusResult);
+
+        if (!statusResult.success) {
+          console.error('Status update failed:', statusResult.error);
+        }
+      }
+
+      // Update Actual 2 column
+      if (actual2Index !== -1) {
+        console.log('Updating Actual 2 column...');
+        const actual2Response = await fetch(
+          'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              sheetName: 'INDENT',
+              action: 'updateCell',
+              rowIndex: rowIndex.toString(),
+              columnIndex: (actual2Index + 1).toString(), // Convert to string
+              value: formattedTimestamp
+            }),
+          }
+        );
+
+        const actual2Result = await actual2Response.json();
+        console.log('Actual 2 update result:', actual2Result);
+
+        if (!actual2Result.success) {
+          console.error('Actual 2 update failed:', actual2Result.error);
+        }
+      }
+      
+      toast.success('Enquiry submitted and INDENT marked as Complete!');
+    } else {
+      toast.success('Enquiry submitted successfully!');
+    }
+
     setShowModal(false);
-    // Refresh data after submission
     fetchAllData();
 
   } catch (error) {
@@ -282,6 +464,8 @@ const FindEnquiry = () => {
     toast.error(`Error: ${error.message}`);
   } finally {
     setSubmitting(false);
+    setUploadingPhoto(false);
+    setUploadingResume(false);
   }
 };
 
@@ -296,6 +480,12 @@ const FindEnquiry = () => {
   const handleFileChange = (e, field) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size must be less than 10MB');
+        return;
+      }
+
       setFormData(prev => ({
         ...prev,
         [field]: file
@@ -303,7 +493,7 @@ const FindEnquiry = () => {
     }
   };
 
-  const filteredPendingData = pendingData.filter(item => {
+  const filteredPendingData = indentData.filter(item => {
     const matchesSearch = item.post?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.indentNo?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
@@ -698,7 +888,7 @@ const FindEnquiry = () => {
                   <div className="flex items-center space-x-2">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.pdf,.doc,.docx"
                       onChange={(e) => handleFileChange(e, 'candidatePhoto')}
                       className="hidden"
                       id="photo-upload"
@@ -708,19 +898,26 @@ const FindEnquiry = () => {
                       className="flex items-center px-4 py-2 border border-gray-300 border-opacity-30 rounded-md cursor-pointer hover:bg-white hover:bg-opacity-10 text-gray-500"
                     >
                       <Upload size={16} className="mr-2" />
-                      Upload Photo
+                      {uploadingPhoto ? 'Uploading...' : 'Upload File'}
                     </label>
-                    {formData.candidatePhoto && (
+                    {formData.candidatePhoto && !uploadingPhoto && (
                       <span className="text-sm text-gray-500 opacity-80">{formData.candidatePhoto.name}</span>
                     )}
+                    {uploadingPhoto && (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-indigo-500 border-dashed rounded-full animate-spin mr-2"></div>
+                        <span className="text-sm text-gray-500">Uploading photo...</span>
+                      </div>
+                    )}
                   </div>
+                  <p className="text-xs text-gray-400 mt-1">Max 10MB. Supports: JPG, JPEG, PNG, PDF, DOC, DOCX</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Candidate Resume</label>
                   <div className="flex items-center space-x-2">
                     <input
                       type="file"
-                      accept=".pdf,.doc,.docx"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                       onChange={(e) => handleFileChange(e, 'candidateResume')}
                       className="hidden"
                       id="resume-upload"
@@ -730,32 +927,55 @@ const FindEnquiry = () => {
                       className="flex items-center px-4 py-2 border border-gray-300 border-opacity-30 rounded-md cursor-pointer hover:bg-white hover:bg-opacity-10 text-gray-500"
                     >
                       <Upload size={16} className="mr-2" />
-                      Upload Resume
+                      {uploadingResume ? 'Uploading...' : 'Upload File'}
                     </label>
-                    {formData.candidateResume && (
+                    {formData.candidateResume && !uploadingResume && (
                       <span className="text-sm text-gray-500 opacity-80">{formData.candidateResume.name}</span>
                     )}
+                    {uploadingResume && (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-indigo-500 border-dashed rounded-full animate-spin mr-2"></div>
+                        <span className="text-sm text-gray-500">Uploading resume...</span>
+                      </div>
+                    )}
                   </div>
+                  <p className="text-xs text-gray-400 mt-1">Max 10MB. Supports: PDF, DOC, DOCX, JPG, JPEG, PNG</p>
+                </div>
+                
+              </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Status *</label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500"
+                    required
+                  >
+                    <option value="NeedMore">Need More </option>
+                    <option value="Complete">Complete</option>
+                  </select>
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-2 pt-4">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
                   className="px-4 py-2 border border-gray-300 border-opacity-30 rounded-md text-gray-500 hover:bg-white hover:bg-opacity-10"
-                  disabled={submitting}
+                  disabled={submitting || uploadingPhoto || uploadingResume}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-opacity-90 flex items-center justify-center"
-                  disabled={submitting}
+                  disabled={submitting || uploadingPhoto || uploadingResume}
                 >
                   {submitting ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-purple-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
