@@ -8,6 +8,7 @@ const CallTracker = () => {
   const [showModal, setShowModal] = useState(false);
   const [showJoiningModal, setShowJoiningModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [followUpData, setFollowUpData] = useState([]);
 
     const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -66,61 +67,80 @@ const CallTracker = () => {
     setError(null);
 
     try {
-      const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=ENQUIRY&action=fetch'
-      );
+      const [enquiryResponse, followUpResponse] = await Promise.all([
+        fetch('https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec?sheet=ENQUIRY&action=fetch'),
+        fetch('https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec?sheet=Follow - Up&action=fetch')
+      ]);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!enquiryResponse.ok || !followUpResponse.ok) {
+        throw new Error(`HTTP error! status: ${enquiryResponse.status} or ${followUpResponse.status}`);
       }
       
-      const result = await response.json();
+      const [enquiryResult, followUpResult] = await Promise.all([
+        enquiryResponse.json(),
+        followUpResponse.json()
+      ]);
       
-      if (!result.success || !result.data || result.data.length < 7) {
-        throw new Error(result.error || 'Not enough rows in sheet data');
+      if (!enquiryResult.success || !enquiryResult.data || enquiryResult.data.length < 7) {
+        throw new Error(enquiryResult.error || 'Not enough rows in enquiry sheet data');
       }
       
-      const headers = result.data[5].map(h => h.trim());
-      const dataFromRow7 = result.data.slice(6);
+      // Process enquiry data
+      const enquiryHeaders = enquiryResult.data[5].map(h => h.trim());
+      const enquiryDataFromRow7 = enquiryResult.data.slice(6);
       
-      const getIndex = (headerName) => headers.findIndex(h => h === headerName);
+      const getIndex = (headerName) => enquiryHeaders.findIndex(h => h === headerName);
       
-const processedData = dataFromRow7
-  .filter(row => {
-    const plannedIndex = getIndex('Planned');
-    const actualIndex = getIndex('Actual');
-    const planned = row[plannedIndex];
-    const actual = row[actualIndex];
-    return planned && (!actual || actual === '');
-  })
-  .map(row => ({
-    id: row[getIndex('Timestamp')],
-    indentNo: row[getIndex('Indent Number')],
-    candidateEnquiryNo: row[getIndex('Candidate Enquiry Number')],
-    applyingForPost: row[getIndex('Applying For the Post')],
-    candidateName: row[getIndex('Candidate Name')],
-    candidateDOB: row[getIndex('DOB')],
-    candidatePhone: row[getIndex('Candidate Phone Number')],
-    candidateEmail: row[getIndex('Candidate Email')],
-    previousCompany: row[getIndex('Previous Company Name')],
-    jobExperience: row[getIndex('Job Experience')] || '',
-    lastSalary: row[getIndex('Last Salary Drawn')] || '',
-    previousPosition: row[getIndex('Previous Position')] || '',
-    reasonForLeaving: row[getIndex('Reason Of Leaving Previous Company')] || '',
-    maritalStatus: row[getIndex('Marital Status')] || '',
-    lastEmployerMobile: row[getIndex('Last Employer Mobile Number')] || '',
-    candidatePhoto: row[getIndex('Candidate Photo')] || '',
-    candidateResume: row[19] || '', // Column T (index 19) - Resume
-    referenceBy: row[getIndex('Reference By')] || '',
-    presentAddress: row[getIndex('Present Address')] || '',
-    aadharNo: row[getIndex('Aadhar Number')] || ''
-  }));
+      const processedEnquiryData = enquiryDataFromRow7
+        .filter(row => {
+          const plannedIndex = getIndex('Planned');
+          const actualIndex = getIndex('Actual');
+          const planned = row[plannedIndex];
+          const actual = row[actualIndex];
+          return planned && (!actual || actual === '');
+        })
+        .map(row => ({
+          id: row[getIndex('Timestamp')],
+          indentNo: row[getIndex('Indent Number')],
+          candidateEnquiryNo: row[getIndex('Candidate Enquiry Number')],
+          applyingForPost: row[getIndex('Applying For the Post')],
+          candidateName: row[getIndex('Candidate Name')],
+          candidateDOB: row[getIndex('DOB')],
+          candidatePhone: row[getIndex('Candidate Phone Number')],
+          candidateEmail: row[getIndex('Candidate Email')],
+          previousCompany: row[getIndex('Previous Company Name')],
+          jobExperience: row[getIndex('Job Experience')] || '',
+          lastSalary: row[getIndex('Last Salary Drawn')] || '',
+          previousPosition: row[getIndex('Previous Position')] || '',
+          reasonForLeaving: row[getIndex('Reason Of Leaving Previous Company')] || '',
+          maritalStatus: row[getIndex('Marital Status')] || '',
+          lastEmployerMobile: row[getIndex('Last Employer Mobile Number')] || '',
+          candidatePhoto: row[getIndex('Candidate Photo')] || '',
+          candidateResume: row[19] || '',
+          referenceBy: row[getIndex('Reference By')] || '',
+          presentAddress: row[getIndex('Present Address')] || '',
+          aadharNo: row[getIndex('Aadhar Number')] || ''
+        }));
       
-      setEnquiryData(processedData);
+      setEnquiryData(processedEnquiryData);
+      
+      // Process follow-up data for filtering
+      if (followUpResult.success && followUpResult.data) {
+        const rawFollowUpData = followUpResult.data || followUpResult;
+        const followUpRows = Array.isArray(rawFollowUpData[0]) ? rawFollowUpData.slice(1) : rawFollowUpData;
+        
+        const processedFollowUpData = followUpRows.map(row => ({
+          enquiryNo: row[1] || '',       // Column B (index 1) - Enquiry No
+          status: row[2] || ''           // Column C (index 2) - Status
+        }));
+        
+        setFollowUpData(processedFollowUpData);
+      }
+      
     } catch (error) {
       console.error('Error fetching data:', error);
       setError(error.message);
-      toast.error('Failed to fetch enquiry data');
+      toast.error('Failed to fetch data');
     } finally {
       setLoading(false);
       setTableLoading(false);
@@ -134,7 +154,7 @@ const fetchFollowUpData = async () => {
 
   try {
     const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=Follow - Up&action=fetch'
+      'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec?sheet=Follow - Up&action=fetch'
     );
 
     if (!response.ok) {
@@ -159,11 +179,11 @@ const fetchFollowUpData = async () => {
     const dataRows = rawData.length > 0 && Array.isArray(rawData[0]) ? rawData.slice(1) : rawData;
     
     const processedData = dataRows.map(row => ({
-      timestamp: row[0] || '',       // First column - Timestamp
-      enquiryNo: row[1] || '',       // Second column - Enquiry No
-      status: row[2] || '',          // Third column - Status
-      candidateSays: row[3] || '',   // Fourth column - Candidates Says
-      nextDate: row[4] || ''         // Fifth column - Next Date
+      timestamp: row[0] || '',       // Column A (index 0) - Timestamp
+      enquiryNo: row[1] || '',       // Column B (index 1) - Enquiry No
+      status: row[2] || '',          // Column C (index 2) - Status
+      candidateSays: row[3] || '',   // Column D (index 3) - Candidates Says
+      nextDate: row[4] || ''         // Column E (index 4) - Next Date
     }));
 
     console.log('Processed follow-up data:', processedData);
@@ -184,7 +204,13 @@ const fetchFollowUpData = async () => {
     fetchFollowUpData();
   }, []);
 
-  const pendingData = enquiryData;
+ const pendingData = enquiryData.filter(item => {
+    const hasFinalStatus = followUpData.some(followUp => 
+      followUp.enquiryNo === item.candidateEnquiryNo && 
+      (followUp.status === 'Joining' || followUp.status === 'Reject')
+    );
+    return !hasFinalStatus;
+  });
 
   const handleCallClick = (item) => {
     setSelectedItem(item);
@@ -223,7 +249,7 @@ const fetchFollowUpData = async () => {
   };
 
   const postToJoiningSheet = async (rowData) => {
-  const URL = 'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec';
+  const URL = 'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec';
 
   try {
     console.log('Attempting to post:', {
@@ -270,7 +296,7 @@ const fetchFollowUpData = async () => {
 
 
 const postToSheet = async (rowData) => {
-  const URL = 'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec';
+  const URL = 'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec';
 
   try {
     console.log('Attempting to post:', {
@@ -326,43 +352,51 @@ const postToSheet = async (rowData) => {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
+ const uploadFileToDrive = async (file, folderId = '1NJbUxhpLSktndUAWcghBjwMHKZ6SwIWL') => {
+    try {
+      // Convert file to base64
+      const reader = new FileReader();
+      const base64Data = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-  // const postJoiningData = async (joiningData) => {
-  //   const URL = 'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec';
+      const params = new URLSearchParams();
+      params.append('action', 'uploadFile');
+      params.append('base64Data', base64Data);
+      params.append('fileName', file.name);
+      params.append('mimeType', file.type);
+      params.append('folderId', folderId);
 
-  //   try {
-  //     // Prepare the data for the joining sheet
-  //     const rowData = [
-  //       joiningData.nameAsPerAadhar,
-  //       joiningData.fatherName,
-  //       joiningData.dateOfJoining,
-  //       // Add all other fields in the order they appear in your sheet
-  //       // ...
-  //       new Date().toISOString()
-  //     ];
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: params,
+        }
+      );
 
-  //     const response = await fetch(URL, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/x-www-form-urlencoded',
-  //       },
-  //       body: new URLSearchParams({
-  //         sheetName: 'Follow - Up', // Make sure this sheet exists
-  //         action: 'insert',
-  //         rowData: JSON.stringify(rowData)
-  //       }),
-  //     });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-  //     const data = await response.json();
-  //     if (!data.success) {
-  //       throw new Error(data.error || 'Failed to update joining sheet');
-  //     }
-  //     return data;
-  //   } catch (error) {
-  //     console.error('Error posting joining data:', error);
-  //     throw error;
-  //   }
-  // };
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'File upload failed');
+      }
+
+      return data.fileUrl;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error(`Failed to upload file: ${error.message}`);
+      throw error;
+    }
+  };
 
  const formatDOB = (dateString) => {
     if (!dateString) return '';
@@ -428,94 +462,110 @@ const handleSubmit = async (e) => {
   }
 };
 
-const handleJoiningSubmit = async (e) => {
-  e.preventDefault();
-  setSubmitting(true);
-  
-  try {
-    const now = new Date();
-    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
-
-    // Create an array with all column values in order
-    const rowData = [];
+ const handleJoiningSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
     
-    // Assign values directly to array indices
-    rowData[0] = formattedTimestamp;           // Timestamp
-    // rowData[1] = "employee no";                // Employee No (placeholder)
-    rowData[2] = selectedItem.indentNo;        // Indent No
-    rowData[3] = selectedItem.candidateEnquiryNo || ''; // Candidate Enquiry No
-    rowData[4] = selectedItem.candidateName;   // Candidate Name
-    rowData[5] = joiningFormData.fatherName;   // Father Name
-    rowData[6] = formatDOB(joiningFormData.dateOfJoining); // Date of Joining
-    rowData[7] = joiningFormData.joiningPlace;  // Joining Place
-    rowData[8] = joiningFormData.designation;   // Designation
-    rowData[9] = joiningFormData.salary;        // Salary
-    rowData[10] = "";                          // Aadhar Front Photo (placeholder)
-    rowData[11] = "";                           // PAN Card Photo (placeholder)
-    rowData[12] = "";                           // Candidate Photo (placeholder)
-    rowData[13] = selectedItem.presentAddress;  // Present Address
-    rowData[14] = joiningFormData.addressAsPerAadhar; // Address as per Aadhar
-    rowData[15] = formatDOB(joiningFormData.dobAsPerAadhar); // DOB as per Aadhar
-    rowData[16] = joiningFormData.gender;       // Gender
-    rowData[17] = selectedItem.candidatePhone;  // Candidate Phone
-    rowData[18] = joiningFormData.familyMobileNo; // Family Mobile No
-    rowData[19] = joiningFormData.relationshipWithFamily; // Relationship with Family
-    rowData[20] = joiningFormData.pastPfId;     // Past PF ID
-    rowData[21] = joiningFormData.currentBankAc; // Current Bank Account
-    rowData[22] = joiningFormData.ifscCode;     // IFSC Code
-    rowData[23] = joiningFormData.branchName;   // Branch Name
-    rowData[24] = "";                           // Bank Passbook Photo (placeholder)
-    rowData[25] = selectedItem.candidateEmail;  // Candidate Email
-    rowData[26] = joiningFormData.esicNo;       // ESIC No
-    rowData[27] = joiningFormData.highestQualification; // Highest Qualification
-    rowData[28] = joiningFormData.pfEligible;   // PF Eligible
-    rowData[29] = joiningFormData.esicEligible; // ESIC Eligible
-    rowData[30] = joiningFormData.joiningCompanyName; // Joining Company Name
-    rowData[31] = joiningFormData.emailToBeIssue; // Email to be Issued
-    rowData[32] = joiningFormData.issueMobile;   // Issue Mobile
-    rowData[33] = joiningFormData.issueLaptop;   // Issue Laptop
-    rowData[34] = selectedItem.aadharNo;        // Aadhar No
-    rowData[35] = joiningFormData.modeOfAttendance; // Mode of Attendance
-    rowData[36] = "";                           // Qualification Photo (placeholder)
-    rowData[37] = joiningFormData.paymentMode;   // Payment Mode
-    rowData[38] = "";                           // Salary Slip (placeholder)
-    rowData[39] = "";                           // Resume Copy (placeholder)
+    try {
+      // Upload files and get URLs
+      const uploadPromises = {};
+      const fileFields = [
+        'aadharFrontPhoto',
+        'aadharBackPhoto',
+        'bankPassbookPhoto',
+        'qualificationPhoto',
+        'salarySlip',
+        'resumeCopy'
+      ];
 
-    await postToJoiningSheet(rowData);
+      for (const field of fileFields) {
+        if (joiningFormData[field]) {
+          uploadPromises[field] = uploadFileToDrive(joiningFormData[field]);
+        } else {
+          uploadPromises[field] = Promise.resolve('');
+        }
+      }
 
-    console.log("Joining Form Data:", rowData);
+      // Wait for all uploads to complete
+      const uploadedUrls = await Promise.all(
+        Object.values(uploadPromises).map(promise => 
+          promise.catch(error => {
+            console.error('Upload failed:', error);
+            return ''; // Return empty string if upload fails
+          })
+        )
+      );
 
-    toast.success('Employee added successfully!');
-    setShowJoiningModal(false);
-    setSelectedItem(null);
-    fetchEnquiryData();
-  } catch (error) {
-    console.error('Error submitting joining form:', error);
-    toast.error(`Failed to submit joining form: ${error.message}`);
-  } finally {
-    setSubmitting(false);
-  }
-};
-    //  await postJoiningData
-      // First update the call tracker
-      // await postToSheet([
-      //   selectedItem.candidateName,
-      //   formData.candidateSays,
-      //   'Joining',
-      //   '',
-      //   new Date().toISOString()
-      // ]);
+      // Map uploaded URLs to their respective fields
+      const fileUrls = {};
+      Object.keys(uploadPromises).forEach((field, index) => {
+        fileUrls[field] = uploadedUrls[index];
+      });
 
-      // Then submit the joining form data
-      // await postJoiningData({
-      //   ...joiningFormData,
-      //   candidateEnquiryNo: selectedItem.candidateEnquiryNo,
-      //   candidateName: selectedItem.candidateName
-      // });
+      const now = new Date();
+      const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
 
- 
+      // Create an array with all column values in order
+      const rowData = [];
+      
+      // Assign values directly to array indices
+      rowData[0] = formattedTimestamp;           // Timestamp
+      // rowData[1] = "employee no";                // Employee No (placeholder)
+      rowData[2] = selectedItem.indentNo;        // Indent No
+      rowData[3] = selectedItem.candidateEnquiryNo || ''; // Candidate Enquiry No
+      rowData[4] = selectedItem.candidateName;   // Candidate Name
+      rowData[5] = joiningFormData.fatherName;   // Father Name
+      rowData[6] = formatDOB(joiningFormData.dateOfJoining); // Date of Joining
+      rowData[7] = joiningFormData.joiningPlace;  // Joining Place
+      rowData[8] = joiningFormData.designation;   // Designation
+      rowData[9] = joiningFormData.salary;        // Salary
+      rowData[10] = fileUrls.aadharFrontPhoto;    // Aadhar Front Photo (Column K)
+      rowData[11] = fileUrls.aadharBackPhoto;     // PAN Card Photo (Column L)
+      rowData[12] = "";                           // Candidate Photo (placeholder)
+      rowData[13] = selectedItem.presentAddress;  // Present Address
+      rowData[14] = joiningFormData.addressAsPerAadhar; // Address as per Aadhar
+      rowData[15] = formatDOB(joiningFormData.dobAsPerAadhar); // DOB as per Aadhar
+      rowData[16] = joiningFormData.gender;       // Gender
+      rowData[17] = selectedItem.candidatePhone;  // Candidate Phone
+      rowData[18] = joiningFormData.familyMobileNo; // Family Mobile No
+      rowData[19] = joiningFormData.relationshipWithFamily; // Relationship with Family
+      rowData[20] = joiningFormData.pastPfId;     // Past PF ID
+      rowData[21] = joiningFormData.currentBankAc; // Current Bank Account
+      rowData[22] = joiningFormData.ifscCode;     // IFSC Code
+      rowData[23] = joiningFormData.branchName;   // Branch Name
+      rowData[24] = fileUrls.bankPassbookPhoto;   // Bank Passbook Photo (Column Y)
+      rowData[25] = selectedItem.candidateEmail;  // Candidate Email
+      rowData[26] = joiningFormData.esicNo;       // ESIC No
+      rowData[27] = joiningFormData.highestQualification; // Highest Qualification
+      rowData[28] = joiningFormData.pfEligible;   // PF Eligible
+      rowData[29] = joiningFormData.esicEligible; // ESIC Eligible
+      rowData[30] = joiningFormData.joiningCompanyName; // Joining Company Name
+      rowData[31] = joiningFormData.emailToBeIssue; // Email to be Issued
+      rowData[32] = joiningFormData.issueMobile;   // Issue Mobile
+      rowData[33] = joiningFormData.issueLaptop;   // Issue Laptop
+      rowData[34] = selectedItem.aadharNo;        // Aadhar No
+      rowData[35] = joiningFormData.modeOfAttendance; // Mode of Attendance
+      rowData[36] = fileUrls.qualificationPhoto;  // Qualification Photo (Column AK)
+      rowData[37] = joiningFormData.paymentMode;   // Payment Mode
+      rowData[38] = fileUrls.salarySlip;          // Salary Slip (Column AM)
+      rowData[39] = fileUrls.resumeCopy;          // Resume Copy (Column AN)
 
-  // Filter functions remain the same
+      await postToJoiningSheet(rowData);
+
+      console.log("Joining Form Data:", rowData);
+
+      toast.success('Employee added successfully!');
+      setShowJoiningModal(false);
+      setSelectedItem(null);
+      fetchEnquiryData();
+    } catch (error) {
+      console.error('Error submitting joining form:', error);
+      toast.error(`Failed to submit joining form: ${error.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const filteredPendingData = pendingData.filter(item => {
     const matchesSearch = item.candidateName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                        item.candidateEnquiryNo?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -733,103 +783,123 @@ const handleJoiningSubmit = async (e) => {
       </div>
 
       {/* Call Modal */}
-      {showModal && selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="flex justify-between items-center p-6 border-b border-gray-300">
-              <h3 className="text-lg font-medium text-gray-900">Call Tracker</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Candidate Enquiry No.</label>
-                <input
-                  type="text"
-                  value={selectedItem.candidateEnquiryNo}
-                  disabled
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-700"
-                />
-              </div> 
-               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-                  required
-                >
-                  <option value="">Select Status</option>
-                  <option value="Follow-up">Follow-up</option>
-                  <option value="Interview">Interview</option>
-                  <option value="Negotiation">Negotiation</option>
-                  <option value="On Hold">On Hold</option>
-                  <option value="Joining">Joining</option>
-                  <option value="Reject">Reject</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">What Did The Candidate Says *</label>
-                <textarea
-                  name="candidateSays"
-                  value={formData.candidateSays}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-                
-                />
-              </div>
-            
-              {formData.status && !['Joining', 'Reject'].includes(formData.status) && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Next Date *</label>
-                  <input
-                    type="date"
-                    name="nextDate"
-                    value={formData.nextDate}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-                    required
-                  />
-                </div>
-              )}
-            <div className="flex justify-end space-x-2 pt-4">
-  <button
-    type="button"
-    onClick={() => setShowModal(false)}
-    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-  >
-    Cancel
-  </button>
-  <button
-    type="submit"
-    className={`px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-indigo-800 min-h-[42px] flex items-center justify-center ${
-      submitting ? 'opacity-90 cursor-not-allowed' : ''
-    }`}
-    disabled={submitting}
-  >
-    {submitting ? (
-      <div className="flex items-center">
-        <svg 
-          className="animate-spin h-4 w-4 text-white mr-2" 
-          xmlns="http://www.w3.org/2000/svg" 
-          fill="none" 
-          viewBox="0 0 24 24"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <span>Submitting...</span>
+{showModal && selectedItem && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+      <div className="flex justify-between items-center p-6 border-b border-gray-300">
+        <h3 className="text-lg font-medium text-gray-900">Call Tracker</h3>
+        <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-700">
+          <X size={20} />
+        </button>
       </div>
-    ) : 'Submit'}
-  </button>
-</div>
-            </form>
-          </div>
+      <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Candidate Enquiry No.</label>
+          <input
+            type="text"
+            value={selectedItem.candidateEnquiryNo}
+            disabled
+            className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-700"
+          />
+        </div> 
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+          <select
+            name="status"
+            value={formData.status}
+            onChange={handleInputChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            required
+          >
+            <option value="">Select Status</option>
+            <option value="Follow-up">Follow-up</option>
+            <option value="Interview">Interview</option>
+            <option value="Negotiation">Negotiation</option>
+            <option value="On Hold">On Hold</option>
+            <option value="Joining">Joining</option>
+            <option value="Reject">Reject</option>
+          </select>
         </div>
-      )}
+        
+        {/* Dynamic Label for Candidate Says Field */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {formData.status === 'Negotiation' 
+              ? "What's Customer Requirement *" 
+              : formData.status === 'On Hold'
+              ? "Reason For Holding the Candidate *"
+              : formData.status === 'Joining'
+              ? "When the candidate will join the company *"
+              : formData.status === 'Reject'
+              ? "Reason for Rejecting the Candidate *"
+              : "What Did The Candidate Says *"}
+          </label>
+          <textarea
+            name="candidateSays"
+            value={formData.candidateSays}
+            onChange={handleInputChange}
+            rows={3}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            required
+          />
+        </div>
+        
+        {/* Dynamic Label for Next Date Field */}
+        {formData.status && !['Joining', 'Reject'].includes(formData.status) && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {formData.status === 'Interview' 
+                ? "Schedule Date *" 
+                : formData.status === 'On Hold'
+                ? "ReCalling Date *"
+                : "Next Date *"}
+            </label>
+            <input
+              type="date"
+              name="nextDate"
+              value={formData.nextDate}
+              onChange={handleInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+              required
+            />
+          </div>
+        )}
+        
+        <div className="flex justify-end space-x-2 pt-4">
+          <button
+            type="button"
+            onClick={() => setShowModal(false)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className={`px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-indigo-800 min-h-[42px] flex items-center justify-center ${
+              submitting ? 'opacity-90 cursor-not-allowed' : ''
+            }`}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <div className="flex items-center">
+                <svg 
+                  className="animate-spin h-4 w-4 text-white mr-2" 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  fill="none" 
+                  viewBox="0 0 24 24"
+                >
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Submitting...</span>
+              </div>
+            ) : 'Submit'}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
 
       {/* Joining Modal */}
       {showJoiningModal && selectedItem && (
@@ -1205,7 +1275,7 @@ const handleJoiningSubmit = async (e) => {
   {/* Section 8: Document Uploads */}
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Aadhar Frontside Photo</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Aadhar Card</label>
       <div className="flex items-center space-x-2">
         <input
           type="file"
@@ -1227,7 +1297,7 @@ const handleJoiningSubmit = async (e) => {
       </div>
     </div>
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Aadhar Backside Photo</label>
+      <label className="block text-sm font-medium text-gray-700 mb-1">Pan Card</label>
       <div className="flex items-center space-x-2">
         <input
           type="file"

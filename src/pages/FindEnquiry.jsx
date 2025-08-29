@@ -18,28 +18,24 @@ const FindEnquiry = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingResume, setUploadingResume] = useState(false);
 
-  const [formData, setFormData] = useState({
-    candidateName: '',
-    candidateDOB: '',
-    candidatePhone: '',
-    candidateEmail: '',
-    previousCompany: '',
-    jobExperience: '',
-    lastSalary: '',
-    previousPosition: '',
-    reasonForLeaving: '',
-    maritalStatus: '',
-    lastEmployerMobile: '',
-    candidatePhoto: null,
-    candidateResume: null,
-    referenceBy: '',
-    presentAddress: '',
-    aadharNo: '',
-    status: 'NeedMore'
-  });
+const [formData, setFormData] = useState({
+  candidateName: '',
+  candidateDOB: '',
+  candidatePhone: '',
+  candidateEmail: '',
+  previousCompany: '',
+  jobExperience: '',
+  previousPosition: '',
+  maritalStatus: '',
+  candidatePhoto: null,
+  candidateResume: null,
+  presentAddress: '',
+  aadharNo: '',
+  status: 'NeedMore'
+});
 
   // Google Drive folder ID for file uploads
-  const GOOGLE_DRIVE_FOLDER_ID = '1AXxD0msg8dSuMxoUH7KrmJ7LjuTPKUK6';
+  const GOOGLE_DRIVE_FOLDER_ID = '1NJbUxhpLSktndUAWcghBjwMHKZ6SwIWL';
 
   // Fetch all necessary data
   const fetchAllData = async () => {
@@ -50,7 +46,7 @@ const FindEnquiry = () => {
     try {
       // Fetch INDENT data
       const indentResponse = await fetch(
-        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=INDENT&action=fetch'
+        'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec?sheet=INDENT&action=fetch'
       );
       
       if (!indentResponse.ok) {
@@ -99,7 +95,7 @@ const FindEnquiry = () => {
 
       // Fetch ENQUIRY data
       const enquiryResponse = await fetch(
-        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=ENQUIRY&action=fetch'
+        'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec?sheet=ENQUIRY&action=fetch'
       );
       
       if (!enquiryResponse.ok) {
@@ -134,7 +130,7 @@ const FindEnquiry = () => {
             maritalStatus: row[getEnquiryIndex('Marital Status')] || '',
             lastEmployerMobile: row[getEnquiryIndex('Last Employer Mobile')] || '',
             candidatePhoto: row[getEnquiryIndex('Candidate Photo')] || '',
-            candidateResume: row[getEnquiryIndex('Candidate Resume')] || '',
+            candidateResume: row[19] || '',
             referenceBy: row[getEnquiryIndex('Reference By')] || '',
             presentAddress: row[getEnquiryIndex('Present Address')] || '',
             aadharNo: row[getEnquiryIndex('Aadhar No')] || ''
@@ -194,7 +190,7 @@ const FindEnquiry = () => {
       const base64Data = await fileToBase64(file);
       
       const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec',
+        'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec',
         {
           method: 'POST',
           headers: {
@@ -312,13 +308,13 @@ const handleSubmit = async (e) => {
       formData.candidateEmail,                      // Column H: Candidate Email
       formData.previousCompany || '',               // Column I: Previous Company Name
       formData.jobExperience || '',                 // Column J: Job Experience
-      formData.lastSalary || '',                    // Column K: Last Salary
+      '',                    // Column K: Last Salary
       formData.previousPosition || '',              // Column L: Previous Position
-      formData.reasonForLeaving || '',              // Column M: Reason For Leaving
+      '',              // Column M: Reason For Leaving
       formData.maritalStatus || '',                 // Column N: Marital Status
-      formData.lastEmployerMobile || '',            // Column O: Last Employer Mobile
+      '',            // Column O: Last Employer Mobile
       photoUrl,                                     // Column P: Candidate Photo (URL)
-      formData.referenceBy || '',                   // Column Q: Reference By
+      '',                   // Column Q: Reference By
       formData.presentAddress || '',                // Column R: Present Address
       formData.aadharNo || '',                      // Column S: Aadhar No
       resumeUrl,                                    // Column T: Candidate Resume (URL)
@@ -328,7 +324,7 @@ const handleSubmit = async (e) => {
 
     // Submit to ENQUIRY sheet
     const enquiryResponse = await fetch(
-      'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec',
+      'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec',
       {
         method: 'POST',
         headers: {
@@ -355,7 +351,7 @@ const handleSubmit = async (e) => {
       
       // Fetch INDENT data
       const indentFetchResponse = await fetch(
-        'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec?sheet=INDENT&action=fetch'
+        'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec?sheet=INDENT&action=fetch'
       );
       
       const indentData = await indentFetchResponse.json();
@@ -399,7 +395,7 @@ const handleSubmit = async (e) => {
       if (statusIndex !== -1) {
         console.log('Updating Status column...');
         const statusResponse = await fetch(
-          'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec',
+          'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec',
           {
             method: 'POST',
             headers: {
@@ -427,7 +423,7 @@ const handleSubmit = async (e) => {
       if (actual2Index !== -1) {
         console.log('Updating Actual 2 column...');
         const actual2Response = await fetch(
-          'https://script.google.com/macros/s/AKfycbyWlc2CfrDgr1JGsJHl1N4nRf-GAR-m6yqPPuP8Oggcafv3jo4thFrhfAX2vnfSzLQLlg/exec',
+          'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec',
           {
             method: 'POST',
             headers: {
@@ -765,14 +761,13 @@ const handleSubmit = async (e) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Candidate Email *</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Candidate Email</label>
                   <input
                     type="email"
                     name="candidateEmail"
                     value={formData.candidateEmail}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
-                    required
                   />
                 </div>
                 <div>
@@ -795,7 +790,7 @@ const handleSubmit = async (e) => {
                     className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Last Salary Drawn</label>
                   <input
                     type="number"
@@ -804,7 +799,7 @@ const handleSubmit = async (e) => {
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
                   />
-                </div>
+                </div> */}
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Previous Position</label>
                   <input
@@ -815,7 +810,7 @@ const handleSubmit = async (e) => {
                     className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Reason for Leaving</label>
                   <input
                     type="text"
@@ -824,7 +819,7 @@ const handleSubmit = async (e) => {
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
                   />
-                </div>
+                </div> */}
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Marital Status</label>
                   <select
@@ -839,7 +834,7 @@ const handleSubmit = async (e) => {
                     <option value="Divorced">Divorced</option>
                   </select>
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Last Employer Mobile</label>
                   <input
                     type="tel"
@@ -848,8 +843,8 @@ const handleSubmit = async (e) => {
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
                   />
-                </div>
-                <div>
+                </div> */}
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Reference By</label>
                   <input
                     type="text"
@@ -858,15 +853,16 @@ const handleSubmit = async (e) => {
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
                   />
-                </div>
+                </div> */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Aadhar No.</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Aadhar No.*</label>
                   <input
                     type="text"
                     name="aadharNo"
                     value={formData.aadharNo}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
+                    required
                   />
                 </div>
               </div>
