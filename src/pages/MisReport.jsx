@@ -1,91 +1,93 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const MisReport = () => {
-  const peopleData = [
-    {
-      id: 1,
-      name: "Rajesh Kumar",
-      department: "Engineering",
-      dateStart: "2025-01-01",
-      dateEnd: "2025-12-31",
-      target: "100%",
-      actualWorkDone: 85,
-      workDone: 85,
-      workDoneOnTime: 90,
-      totalWorkDone: 2,
-      weekPending: '',
-      avatar: "👨‍💼"
-    },
-    {
-      id: 2,
-      name: "Priya Sharma",
-      department: "Design",
-      dateStart: "2025-02-01",
-      dateEnd: "2025-12-31",
-      target: "95%",
-      actualWorkDone: 82,
-      workDone: 82,
-      workDoneOnTime: 85,
-      totalWorkDone: 3,
-      weekPending: '',
-      avatar: "👩‍💼"
-    },
-    {
-      id: 3,
-      name: "Amit Patel",
-      department: "Marketing",
-      dateStart: "2025-03-01",
-      dateEnd: "2025-12-31",
-      target: "90%",
-      actualWorkDone: 70,
-      workDone: 70,
-      workDoneOnTime: 75,
-      totalWorkDone: 4,
-      weekPending: '',
-      avatar: "👨‍💼"
-    },
-    {
-      id: 4,
-      name: "Neha Gupta",
-      department: "Sales",
-      dateStart: "2025-01-15",
-      dateEnd: "2025-12-31",
-      target: "100%",
-      actualWorkDone: 95,
-      workDone: 95,
-      workDoneOnTime: 98,
-      totalWorkDone: 1,
-      weekPending: '',
-      avatar: "👩‍💼"
-    },
-    {
-      id: 5,
-      name: "Vikram Singh",
-      department: "Engineering",
-      dateStart: "2025-02-15",
-      dateEnd: "2025-12-31",
-      target: "95%",
-      actualWorkDone: 88,
-      workDone: 88,
-      workDoneOnTime: 90,
-      totalWorkDone: 2,
-      weekPending: '',
-      avatar: "👨‍💼"
-    }
-  ];
+  const [peopleData, setPeopleData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const ProgressBar = ({ value, color }) => {
-    return (
-      <div className="flex items-center space-x-2">
-        <div className="w-20 bg-gray-200 rounded-full h-3">
-          <div 
-            className={`h-3 rounded-full ${color}`} 
-            style={{ width: `${value}%` }}
-          ></div>
-        </div>
-        <span className="text-sm text-gray-600">{value}%</span>
-      </div>
-    );
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=MIS&action=fetch');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch data');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Process the data from the sheet
+        const processedData = processSheetData(data.data);
+        setPeopleData(processedData);
+      } else {
+        throw new Error(data.error || 'Failed to fetch data from sheet');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const processSheetData = (sheetData) => {
+    if (!sheetData || sheetData.length < 2) return [];
+    
+    const headers = sheetData[0];
+    const rows = sheetData.slice(1);
+    
+    // Map column letters to indices
+    const columnMap = {};
+    headers.forEach((header, index) => {
+      columnMap[header.trim()] = index;
+    });
+    
+    return rows.map((row, index) => {
+      // Get values from each column
+      const dateStart = row[columnMap['Date Start']] || '';
+      const dateEnd = row[columnMap['Date End']] || '';
+      const name = row[columnMap['Name']] || '';
+      const target = row[columnMap['Target']] || '';
+      const actualWorkDone = row[columnMap['Actual  Work Done']] || '';
+      const weeklyWorkDone = row[columnMap['Weekly Work Done %']] || '';
+      const weeklyWorkDoneOnTime = row[columnMap['Weekly Work Done On Time %']] || '';
+      const totalWorkDone = parseInt(row[columnMap['Total Work Done']]) || 0;
+      const weekPending = row[columnMap['Week Pending']] || '';
+      const allPendingTillDate = row[columnMap['All Pending Till Date']] || '';
+      const plannedWorkNotDone = row[columnMap['Planned % Work Not Done']] || '';
+      const plannedWorkNotDoneOnTime = row[columnMap['Planned % Work Not Done On Time']] || '';
+      
+      // Generate avatar based on name
+      const avatar = name && name.trim() !== '' ? 
+        (name.split(' ').length > 1 ? 
+          `${name.split(' ')[0][0]}${name.split(' ')[1][0]}`.toUpperCase() : 
+          name[0].toUpperCase()) : 
+        '👤';
+
+        
+      
+      return {
+        id: index + 1,
+        name,
+        dateStart,
+        dateEnd,
+        target,
+        actualWorkDone,
+        weeklyWorkDone,
+        weeklyWorkDoneOnTime,
+        totalWorkDone,
+        weekPending,
+        allPendingTillDate,
+        plannedWorkNotDone,
+        plannedWorkNotDoneOnTime,
+        avatar
+      };
+    });
   };
 
   const TotalDoneWork = ({ weeks }) => {
@@ -103,10 +105,49 @@ const MisReport = () => {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-4">Error</div>
+          <p className="text-gray-600">{error}</p>
+          <button 
+            onClick={fetchData}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">List of People</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">MIS Report</h1>
+          <button 
+            onClick={fetchData}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+        </div>
         
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
@@ -118,46 +159,67 @@ const MisReport = () => {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATE END</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TARGET</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTUAL WORK DONE</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">% WORK DONE</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">% WORK DONE ON TIME</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WEEKLY WORK DONE %</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WEEKLY WORK DONE ON TIME %</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TOTAL WORK DONE</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WEEK PENDING</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ALL PENDING TILL DATE</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PLANNED % WORK NOT DONE</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PLANNED % WORK NOT DONE ON TIME</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {peopleData.map((person, index) => (
-                  <tr key={person.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-lg">
-                            {person.avatar}
+                {peopleData.length > 0 ? (
+                  peopleData.map((person, index) => (
+                    <tr key={person.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-10 w-10">
+                            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-lg">
+                              {person.avatar}
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">{person.name}</div>
                           </div>
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{person.name}</div>
-                          <div className="text-sm text-gray-500">{person.department}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{person.dateStart}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{person.dateEnd}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{person.target}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <ProgressBar value={person.actualWorkDone} color="bg-blue-500" />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <ProgressBar value={person.workDone} color="bg-green-500" />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <ProgressBar value={person.workDoneOnTime} color="bg-purple-500" />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><TotalDoneWork weeks={person.totalWorkDone} /></td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                    {person.weekPending}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{person.dateStart}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{person.dateEnd}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{person.target}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.actualWorkDone}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.weeklyWorkDone}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.weeklyWorkDoneOnTime}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <TotalDoneWork weeks={person.totalWorkDone} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.weekPending}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.allPendingTillDate}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.plannedWorkNotDone}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {person.plannedWorkNotDoneOnTime}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="12" className="px-6 py-4 text-center text-gray-500">
+                      No data available
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

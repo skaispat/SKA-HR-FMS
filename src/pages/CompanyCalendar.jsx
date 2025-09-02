@@ -13,7 +13,7 @@ const CompanyCalendar = () => {
     setLoading(true);
     try {
       const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbw4owzmbghov5H20X2JiuOTiz4lH-jtHZQyPRuMPeO-iZQfD0EGdmgDfk9F2HdZjO9l/exec?sheet=CompanyCalendar&action=fetch'
+        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=CompanyCalendar&action=fetch'
       );
       
       if (!response.ok) {
