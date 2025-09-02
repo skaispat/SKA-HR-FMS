@@ -27,7 +27,7 @@ const LeaveRequest = () => {
     reason: ''
   });
 
-  const fetchEmployeeData = async () => {
+const fetchEmployeeData = async () => {
   try {
     const response = await fetch(
       'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch'
@@ -49,16 +49,20 @@ const LeaveRequest = () => {
       throw new Error('Expected array data not received');
     }
 
-    // Find the employee data based on employeeId
+    // Find the employee data based on employee name (Column E, index 4)
     const employeeRow = rawData.find(row => 
-      row[1]?.toString().trim() === employeeId?.toString().trim()
+      row[4]?.toString().trim().toLowerCase() === user.Name?.toString().trim().toLowerCase()
     );
     
     if (employeeRow) {
+      // Column B (index 1) contains Employee ID
+      const employeeId = employeeRow[1] || '';
       // Column I (index 8) contains designation
       const designation = employeeRow[8] || '';
+      
       setFormData(prev => ({
         ...prev,
+        employeeId: employeeId,
         designation: designation
       }));
     }
