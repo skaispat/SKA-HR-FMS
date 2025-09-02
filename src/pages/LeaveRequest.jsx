@@ -192,66 +192,66 @@ useEffect(() => {
     return date.getMonth() === parseInt(monthIndex);
   };
 
-  const fetchLeaveData = async () => {
-    setLoading(true);
-    setTableLoading(true);
-    setError(null);
+const fetchLeaveData = async () => {
+  setLoading(true);
+  setTableLoading(true);
+  setError(null);
 
-    try {
-      const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Leave Management&action=fetch'
-      );
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch leave data');
-      }
-      
-      const rawData = result.data || result;
-      console.log("Raw data from API:", rawData);
-      
-      if (!Array.isArray(rawData)) {
-        throw new Error('Expected array data not received');
-      }
-
-      const dataRows = rawData.length > 1 ? rawData.slice(1) : [];
-      
-      // Process and filter data by employee name
-      const processedData = dataRows
-        .map((row, index) => ({
-          id: index + 1,
-          timestamp: row[0] || '',
-          serialNo: row[1] || '',
-          employeeId: row[2] || '',
-          employeeName: row[3] || '',
-          startDate: row[4] || '',
-          endDate: row[5] || '',
-          reason: row[6] || '',
-          days: calculateDays(row[4], row[5]),
-          status: row[7] || 'Pending',
-          leaveType: row[8] || '',
-          appliedDate: row[0] || '', // Using timestamp as applied date
-          approvedBy: row[9] || '', // Adjust index if needed
-        }))
-        .filter(item => item.employeeName === user.Name);
-      
-      console.log("Filtered leave data:", processedData);
-      setLeavesData(processedData);
-     
-    } catch (error) {
-      console.error('Error fetching leave data:', error);
-      setError(error.message);
-      toast.error(`Failed to load leave data: ${error.message}`);
-    } finally {
-      setLoading(false);
-      setTableLoading(false);
+  try {
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Leave Management&action=fetch'
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch leave data');
+    }
+    
+    const rawData = result.data || result;
+    console.log("Raw data from API:", rawData);
+    
+    if (!Array.isArray(rawData)) {
+      throw new Error('Expected array data not received');
+    }
+
+    const dataRows = rawData.length > 1 ? rawData.slice(1) : [];
+    
+    // Process and filter data by employee name
+    const processedData = dataRows
+      .map((row, index) => ({
+        id: index + 1,
+        timestamp: row[0] || '',
+        serialNo: row[1] || '',
+        employeeId: row[2] || '',
+        employeeName: row[3] || '',
+        startDate: row[4] || '',
+        endDate: row[5] || '',
+        reason: row[6] || '',
+        days: calculateDays(row[4], row[5]),
+        status: row[7] || 'Pending',
+        leaveType: row[8] || '', // Column I (index 8) - Leave Type
+        appliedDate: row[0] || '', // Using timestamp as applied date
+        approvedBy: row[9] || '', // Adjust index if needed
+      }))
+      .filter(item => item.employeeName === user.Name);
+    
+    console.log("Filtered leave data:", processedData);
+    setLeavesData(processedData);
+   
+  } catch (error) {
+    console.error('Error fetching leave data:', error);
+    setError(error.message);
+    toast.error(`Failed to load leave data: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setTableLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchLeaveData();
@@ -328,6 +328,30 @@ useEffect(() => {
     'Normal Leave',
   ];
 
+const calculateLeaveCounts = () => {
+  // Filter for approved leaves for this specific employee
+  const approvedLeaves = leavesData.filter(leave => 
+    leave.status && leave.status.toLowerCase() === 'approved' && 
+    leave.employeeName === user.Name &&
+    (selectedMonth === 'all' || 
+     isDateInMonth(leave.startDate, selectedMonth) || 
+     isDateInMonth(leave.endDate, selectedMonth))
+  );
+  return {
+    'Casual Leave': approvedLeaves
+      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'casual leave')
+      .reduce((sum, leave) => sum + (leave.days || 0), 0),
+    'Earned Leave': approvedLeaves
+      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'earned leave')
+      .reduce((sum, leave) => sum + (leave.days || 0), 0),
+    'Normal Leave': approvedLeaves
+      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'normal leave')
+      .reduce((sum, leave) => sum + (leave.days || 0), 0),
+  };
+};
+
+
+
   // Calculate leave balance based on approved leaves for the specific employee
   const calculateLeaveBalance = () => {
     // Filter for approved leaves for this specific employee
@@ -352,31 +376,33 @@ useEffect(() => {
     };
   };
 
-  // Calculate approved leave counts for each type for this employee
-  const calculateApprovedLeaveCounts = () => {
-    const approvedLeaves = leavesData.filter(leave => 
-      leave.status && leave.status.toLowerCase() === 'approved' && 
+// ✅ Approved leave counts (only number of requests)
+const calculateApprovedLeaveCounts = () => {
+  const approvedLeaves = leavesData.filter(
+    leave =>
+      leave.status &&
+      leave.status.toLowerCase() === 'approved' &&
       leave.employeeName === user.Name &&
-      (selectedMonth === 'all' || 
-       isDateInMonth(leave.startDate, selectedMonth) || 
-       isDateInMonth(leave.endDate, selectedMonth))
-    );
-    
-    return {
-      'Casual Leave': approvedLeaves
-        .filter(leave => leave.leaveType === 'Casual Leave')
-        .reduce((sum, leave) => sum + (leave.days || 0), 0),
-      'Earned Leave': approvedLeaves
-        .filter(leave => leave.leaveType === 'Earned Leave')
-        .reduce((sum, leave) => sum + (leave.days || 0), 0),
-      'Normal Leave': approvedLeaves
-        .filter(leave => leave.leaveType === 'Normal Leave')
-        .reduce((sum, leave) => sum + (leave.days || 0), 0),
-    };
-  };
+      (selectedMonth === 'all' ||
+        isDateInMonth(leave.startDate, selectedMonth) ||
+        isDateInMonth(leave.endDate, selectedMonth))
+  );
 
-  const leaveBalance = calculateLeaveBalance();
-  const approvedCounts = calculateApprovedLeaveCounts();
+  return {
+    'Casual Leave': approvedLeaves.filter(
+      leave => leave.leaveType && leave.leaveType.toLowerCase() === 'casual leave'
+    ).length,
+    'Earned Leave': approvedLeaves.filter(
+      leave => leave.leaveType && leave.leaveType.toLowerCase() === 'earned leave'
+    ).length,
+    'Normal Leave': approvedLeaves.filter(
+      leave => leave.leaveType && leave.leaveType.toLowerCase() === 'normal leave'
+    ).length,
+  };
+};
+
+const approvedCounts = calculateApprovedLeaveCounts();
+
 
   // Generate month options for the dropdown
   const monthOptions = [
@@ -431,44 +457,25 @@ useEffect(() => {
       </div>
 
       {/* Leave Balance Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {Object.entries(leaveBalance).map(([leaveType, remaining]) => {
-          const total = 
-            leaveType === 'Casual Leave' ? 7 :
-            leaveType === 'Earned Leave' ? 15 : 10;
-          
-          const used = approvedCounts[leaveType];
-          const percentage = total > 0 ? (used / total) * 100 : 0;
-          
-          return (
-            <div key={leaveType} className="bg-white rounded-xl shadow-lg border p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">{leaveType}</p>
-                  <h3 className="text-2xl font-bold text-gray-800">{used}</h3>
-                  <p className="text-xs text-gray-500">
-                    {used} of {total} days used
-                  </p>
-                  <p className="text-xs text-indigo-600 font-medium mt-1">
-                    {remaining} day{remaining !== 1 ? 's' : ''} remaining
-                  </p>
-                </div>
-                <div className="p-3 rounded-full bg-indigo-100">
-                  <Calendar size={24} className="text-indigo-600" />
-                </div>
-              </div>
-              <div className="mt-4">
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-indigo-600 h-2 rounded-full" 
-                    style={{ width: `${percentage}%` }}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {Object.entries(approvedCounts).map(([leaveType, count]) => (
+    <div key={leaveType} className="bg-white rounded-xl shadow-lg border p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-600 font-medium">{leaveType}</p>
+          <h3 className="text-2xl font-bold text-gray-800">{count}</h3>
+          <p className="text-xs text-gray-500">
+            Approved requests count
+          </p>
+        </div>
+        <div className="p-3 rounded-full bg-indigo-100">
+          <Calendar size={24} className="text-indigo-600" />
+        </div>
       </div>
+    </div>
+  ))}
+</div>
+
 
       {/* Leave Requests Table */}
       <div className="bg-white rounded-lg shadow border overflow-hidden">
