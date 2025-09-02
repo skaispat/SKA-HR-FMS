@@ -20,72 +20,75 @@ const Leaving = () => {
     reasonOfLeaving: ''
   });
 
-  // Fetch joining data
-  const fetchJoiningData = async () => {
-    setLoading(true);
-    setTableLoading(true);
-    setError(null);
+const fetchJoiningData = async () => {
+  setLoading(true);
+  setTableLoading(true);
+  setError(null);
 
-    try {
-      const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch'
-      );
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
-      }
-      
-      const rawData = result.data || result;
-      
-      if (!Array.isArray(rawData)) {
-        throw new Error('Expected array data not received');
-      }
-
-      const headers = rawData[5];
-      const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
-      
-      const getIndex = (headerName) => {
-        const index = headers.findIndex(h => 
-          h && h.toString().trim().toLowerCase() === headerName.toLowerCase()
-        );
-        return index;
-      };
-
-      const processedData = dataRows.map(row => ({
-        employeeNo: row[getIndex('Employee ID')] || '',
-        candidateName: row[getIndex('Name As Per Aadhar')] || '',
-        fatherName: row[getIndex('Father Name')] || '',
-        dateOfJoining: row[getIndex('Date Of Joining')] || '',
-        designation: row[getIndex('Designation')] || '',
-        salary: row[getIndex('Salary')] || '',
-        mobileNo: row[getIndex('Mobile No.')] || '',
-        firmName: row[getIndex('Joining Company Name')] || '', 
-        workingPlace: row[getIndex('Joining Place')] || '',
-        plannedDate: row[getIndex('Planned Date')] || '',
-        actual: row[getIndex('Actual')] || '',
-      }));
-
-      // Filter for completed joining tasks
-      const completedTasks = processedData.filter(
-        (task) => task.plannedDate && task.actual
-      );
-      
-      setPendingData(completedTasks);
-    } catch (error) {
-      console.error('Error fetching joining data:', error);
-      setError(error.message);
-      toast.error(`Failed to load joining data: ${error.message}`);
-    } finally {
-      setLoading(false);
-      setTableLoading(false);
+  try {
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch'
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
+    }
+    
+    const rawData = result.data || result;
+    
+    if (!Array.isArray(rawData)) {
+      throw new Error('Expected array data not received');
+    }
+
+    const headers = rawData[5];
+    const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+    
+    const getIndex = (headerName) => {
+      const index = headers.findIndex(h => 
+        h && h.toString().trim().toLowerCase() === headerName.toLowerCase()
+      );
+      return index;
+    };
+
+    const processedData = dataRows.map((row, index) => ({
+      rowIndex: index + 7, // Actual row number in sheet (starting from row 7)
+      employeeNo: row[getIndex('Employee ID')] || '',
+      candidateName: row[getIndex('Name As Per Aadhar')] || '',
+      fatherName: row[getIndex('Father Name')] || '',
+      dateOfJoining: row[getIndex('Date Of Joining')] || '',
+      designation: row[getIndex('Designation')] || '',
+      salary: row[getIndex('Salary')] || '',
+      mobileNo: row[getIndex('Mobile No.')] || '',
+      firmName: row[getIndex('Joining Company Name')] || '', 
+      workingPlace: row[getIndex('Joining Place')] || '',
+      plannedDate: row[getIndex('Planned Date')] || '',
+      actual: row[getIndex('Actual')] || '',
+      // Get values from specific column indices
+      columnAO: row[40] || '', // Column AO (index 40)
+      columnAQ: row[42] || '', // Column AQ (index 42)
+    }));
+
+    // Filter for employees with non-null value in AQ and null value in AO
+    const pendingLeavingTasks = processedData.filter(
+      (task) => task.columnAQ && !task.columnAO
+    );
+    
+    setPendingData(pendingLeavingTasks);
+  } catch (error) {
+    console.error('Error fetching joining data:', error);
+    setError(error.message);
+    toast.error(`Failed to load joining data: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setTableLoading(false);
+  }
+};
 
   // Fetch leaving data
   const fetchLeavingData = async () => {
@@ -207,66 +210,108 @@ const Leaving = () => {
     return `${day}/${month}/${year}`;
   };
 
-  const handleSubmit = async(e) => {
-    e.preventDefault();
-    if (!formData.dateOfLeaving || !formData.reasonOfLeaving) {
-      toast.error('Please fill all required fields');
-      return;
-    }
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!formData.dateOfLeaving || !formData.reasonOfLeaving) {
+    toast.error('Please fill all required fields');
+    return;
+  }
 
+  try {
+    setSubmitting(true);
+    const now = new Date();
+    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} `;
+    
+    // Format date for JOINING sheet (dd/mm/yyyy)
+    const formattedLeavingDate = formatDOB(formData.dateOfLeaving);
+    
+    const rowData = [
+      formattedTimestamp,
+      selectedItem.employeeNo,
+      selectedItem.candidateName,
+      formattedLeavingDate,
+      formData.mobileNumber,
+      formData.reasonOfLeaving,
+      selectedItem.firmName,
+      selectedItem.fatherName,
+      formatDOB(selectedItem.dateOfJoining),
+      selectedItem.workingPlace,
+      selectedItem.designation,
+      selectedItem.salary,
+    ];
+
+    // First, update the JOINING sheet with leaving date
+    const updateJoiningParams = new URLSearchParams({
+      sheetName: 'JOINING',
+      action: 'updateCell',
+      rowIndex: selectedItem.rowIndex.toString(), // Use the actual row index from the JOINING sheet
+      columnIndex: '41', // Column AO is index 41 (0-based index + 1 for Sheets)
+      value: formattedLeavingDate,
+    });
+
+    const updateJoiningResponse = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec', {
+      method: 'POST',
+      body: updateJoiningParams,
+    });
+
+    const updateText = await updateJoiningResponse.text();
+    let updateResult;
+    
     try {
-      setSubmitting(true);
-      const now = new Date();
-      const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} `;
-
-      const rowData = [
-        formattedTimestamp,
-        selectedItem.employeeNo,
-        selectedItem.candidateName,
-        formatDOB(formData.dateOfLeaving),
-        formData.mobileNumber,
-        formData.reasonOfLeaving,
-        selectedItem.firmName,
-        selectedItem.fatherName,
-        formatDOB(selectedItem.dateOfJoining),
-        selectedItem.workingPlace,
-        selectedItem.designation,
-        selectedItem.salary,
-      ];
-
-      const response = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec', {
-        method: 'POST',
-        body: new URLSearchParams({
-          sheetName: 'LEAVING',
-          action: 'insert',
-          rowData: JSON.stringify(rowData),
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setFormData({
-          dateOfLeaving: '',
-          reasonOfLeaving: '',
-        });
-        setShowModal(false);
-        toast.success('Leaving request added successfully!');
-        setSelectedItem(null);
-        
-        // Refresh both datasets
-        await fetchJoiningData();
-        await fetchLeavingData();
-      } else {
-        toast.error('Failed to insert: ' + (result.error || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Insert error:', error);
-      toast.error('Something went wrong!');
-    } finally {
-      setSubmitting(false);
+      updateResult = JSON.parse(updateText);
+    } catch (parseError) {
+      console.error('Failed to parse JOINING update response:', updateText);
+      throw new Error(`Server returned invalid response: ${updateText.substring(0, 100)}...`);
     }
-  };
+    
+    if (!updateResult.success) {
+      throw new Error(updateResult.error || 'Failed to update JOINING sheet');
+    }
+
+    // Then, insert the leaving record
+    const insertParams = new URLSearchParams({
+      sheetName: 'LEAVING',
+      action: 'insert',
+      rowData: JSON.stringify(rowData),
+    });
+
+    const insertResponse = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec', {
+      method: 'POST',
+      body: insertParams,
+    });
+
+    const insertText = await insertResponse.text();
+    let insertResult;
+    
+    try {
+      insertResult = JSON.parse(insertText);
+    } catch (parseError) {
+      console.error('Failed to parse LEAVING insert response:', insertText);
+      throw new Error(`Server returned invalid response: ${insertText.substring(0, 100)}...`);
+    }
+
+    if (insertResult.success) {
+      setFormData({
+        dateOfLeaving: '',
+        reasonOfLeaving: '',
+      });
+      setShowModal(false);
+      toast.success('Leaving request added successfully!');
+      setSelectedItem(null);
+      
+      // Refresh both datasets
+      await fetchJoiningData();
+      await fetchLeavingData();
+    } else {
+      throw new Error(insertResult.error || 'Failed to insert into LEAVING sheet');
+    }
+  } catch (error) {
+    console.error('Submit error:', error);
+    toast.error('Something went wrong: ' + error.message);
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <div className="space-y-6">
@@ -371,8 +416,8 @@ const Leaving = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.candidateName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.fatherName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {item.dateOfJoining ? new Date(item.dateOfJoining).toLocaleDateString() : '-'}
-                      </td>
+  {item.dateOfJoining ? formatDOB(item.dateOfJoining) : '-'}
+</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.designation}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.salary}</td>
                     </tr>

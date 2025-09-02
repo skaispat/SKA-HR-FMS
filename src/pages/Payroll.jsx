@@ -3,9 +3,7 @@ import { Search, Calendar, Filter, MoreVertical } from 'lucide-react';
 
 const Payroll = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPeriod, setSelectedPeriod] = useState(
-    new Date().toISOString().slice(0, 7)
-  );
+  const [selectedPeriod, setSelectedPeriod] = useState(""); // Changed to empty string by default
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [payrollData, setPayrollData] = useState([]);
@@ -80,13 +78,34 @@ const Payroll = () => {
     }));
   };
 
-  // Filter data based on search term
-  const filteredData = payrollData.filter((item) => {
+  // Filter data based on search term and selected period
+   const filteredData = payrollData.filter((item) => {
+    // Filter by search term (emp code, name, designation, year, month)
     const matchesSearch = 
+      item.employeeCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.employeeCode.toLowerCase().includes(searchTerm.toLowerCase());
+      item.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.year.toString().includes(searchTerm) ||
+      item.month.toString().toLowerCase().includes(searchTerm.toLowerCase());
     
-    return matchesSearch;
+    // Filter by selected period (year-month)
+    let matchesPeriod = true;
+    if (selectedPeriod) {
+      const [selectedYear, selectedMonthNum] = selectedPeriod.split('-');
+      
+      // Convert numeric month to full month name
+      const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+      ];
+      const selectedMonthName = monthNames[parseInt(selectedMonthNum) - 1];
+      
+      // Match with year in column P and month name in column Q
+      matchesPeriod = item.year.toString() === selectedYear && 
+                     item.month.toString() === selectedMonthName;
+    }
+    
+    return matchesSearch && matchesPeriod;
   });
 
   return (
@@ -119,7 +138,7 @@ const Payroll = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search by name or employee code..."
+                  placeholder="Search by emp code, name, designation, year or month..."
                   className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -146,10 +165,6 @@ const Payroll = () => {
               </div>
 
               <div className="relative group">
-                <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center text-gray-700">
-                  <Filter size={18} className="mr-2" />
-                  Filters
-                </button>
                 <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 p-4 space-y-2 border border-gray-200">
                   <div>
                     <label className="block text-sm mb-1 text-gray-700">

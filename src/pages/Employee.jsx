@@ -3,17 +3,16 @@ import { Filter, Search, Clock, CheckCircle } from 'lucide-react';
 import useDataStore from '../store/dataStore';
 
 const Employee = () => {
-//  const { employeeData, leavingData } = useDataStore();
   const [activeTab, setActiveTab] = useState('joining');
   const [searchTerm, setSearchTerm] = useState('');
-    const [joiningData, setJoiningData] = useState([]);
-    const [leavingData, setLeavingData] = useState([]);
-     const [loading, setLoading] = useState(false);
-      const [tableLoading, setTableLoading] = useState(false);
-          const [submitting, setSubmitting] = useState(false);
-       const [error, setError] = useState(null);
+  const [joiningData, setJoiningData] = useState([]);
+  const [leavingData, setLeavingData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
- const formatDOB = (dateString) => {
+  const formatDOB = (dateString) => {
     if (!dateString) return '';
     
     const date = new Date(dateString);
@@ -29,104 +28,81 @@ const Employee = () => {
   };
 
   const fetchJoiningData = async () => {
-  setLoading(true);
-  setTableLoading(true);
-  setError(null);
+    setLoading(true);
+    setTableLoading(true);
+    setError(null);
 
-  try {
-    const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch'
-    );
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const result = await response.json();
-    console.log('Raw JOINING API response:', result);
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
-    }
-    
-    // Handle both array formats (direct data or result.data)
-    const rawData = result.data || result;
-    
-    if (!Array.isArray(rawData)) {
-      throw new Error('Expected array data not received');
-    }
-
-    // Get headers from row 6 (index 5 in 0-based array)
-    const headers = rawData[5];
-    
-    // Process data starting from row 7 (index 6)
-    const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
-    
-    const getIndex = (headerName) => {
-      const index = headers.findIndex(h => 
-        h && h.toString().trim().toLowerCase() === headerName.toLowerCase()
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch'
       );
-      if (index === -1) {
-        console.warn(`Column "${headerName}" not found in sheet`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return index;
-    };
+      
+      const result = await response.json();
+      console.log('Raw JOINING API response:', result);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch data from JOINING sheet');
+      }
+      
+      // Handle both array formats (direct data or result.data)
+      const rawData = result.data || result;
+      
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
 
-    const processedData = dataRows.map(row => ({
-      employeeId: row[getIndex('Employee ID')] || '',
-      candidateName: row[getIndex('Name As Per Aadhar')] || '',
-      fatherName: row[getIndex('Father Name')] || '',
-      dateOfJoining: row[getIndex('Date Of Joining')] || '',
-      joiningPlace: row[getIndex('Joining Place')] || '',
-      designation: row[getIndex('Designation')] || '',
-      salary: row[getIndex('Salary')] || '',
-          mobileNo: row[getIndex('Mobile No.')] || '',
-        // familyMobileNo: row[getIndex('Family Mobile No.')] || '',
-        // relationWithFamily: row[getIndex('Relationship With Family Person  ')] || '',
-        //  pfId: row[getIndex('Past Pf Id No. (If Any)')] || '',
-        //  accountNo: row[getIndex('Current Bank A.C No.')] || '', 
-        //   ifscCode: row[getIndex('Ifsc Code')] || '',
-        //    branchName: row[getIndex('Branch Name')] || '',
-        //     passbookPhoto: row[getIndex('Photo Of Front Bank Passbook')] || '',
-        //      email: row[getIndex('Personal Email-Id')] || '', 
-        //   esicNo: row[getIndex('ESIC No (IF Any)')] || '',
-        //   qualification: row[getIndex('Highest Qualification')] || '',
-        //     pfEligible: row[getIndex('PF Eligible')] || '',
-        //       esicEligible: row[getIndex('ESIC Eligible')] || '',
-        //          companyName: row[getIndex('Joining Company Name')] || '',
-        //           emailToBeIssue: row[getIndex('Email ID To Be Issue')] || '',
-        // issueMobile: row[getIndex('Issue Mobile')] || '',
-        //            issueLaptop: row[getIndex('Issue Laptop')] || '',
-        //             aadharNo: row[getIndex('Aadhar Card No')] || '',
-        //                   modeOfAttendance: row[getIndex('Mode Of Attendance')] || '',
-        //                  quaficationPhoto: row[getIndex('Quafication Photo')] || '',
-        //            paymentMode: row[getIndex('Payment Mode')] || '',
-        //            salarySlip: row[getIndex('Salary Slip')] || '',
-        //            resumeCopy: row[getIndex('Resume Copy')] || '',
-        //            plannedDate: row[getIndex('Planned Date')] || '',
-        //            actual: row[getIndex('Actual')] || '',
-                    status: row[getIndex('Status')] || '',
-      // Add other fields as needed
-    }));
+      // Get headers from row 6 (index 5 in 0-based array)
+      const headers = rawData[5];
+      
+      // Process data starting from row 7 (index 6)
+      const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+      
+      const getIndex = (headerName) => {
+        const index = headers.findIndex(h => 
+          h && h.toString().trim().toLowerCase() === headerName.toLowerCase()
+        );
+        if (index === -1) {
+          console.warn(`Column "${headerName}" not found in sheet`);
+        }
+        return index;
+      };
 
-    const joiningTasks = processedData.filter(
-  (task) => task.status === "active"  // Assuming there's a 'status' field in your data
-);
+      const processedData = dataRows.map(row => ({
+        employeeId: row[getIndex('Employee ID')] || '',
+        candidateName: row[getIndex('Name As Per Aadhar')] || '',
+        fatherName: row[getIndex('Father Name')] || '',
+        dateOfJoining: row[getIndex('Date Of Joining')] || '',
+        joiningPlace: row[getIndex('Joining Place')] || '',
+        designation: row[getIndex('Designation')] || '',
+        salary: row[getIndex('Salary')] || '',
+        mobileNo: row[getIndex('Mobile No.')] || '',
+        // New fields for filtering
+        columnAQ: row[42] || '', // Column AQ (index 42)
+        columnAO: row[40] || '', // Column AO (index 40)
+      }));
 
-setJoiningData(joiningTasks);
-   
-    
-  } catch (error) {
-    console.error('Error fetching joining data:', error);
-    setError(error.message);
-    toast.error(`Failed to load joining data: ${error.message}`);
-  } finally {
-    setLoading(false);
-    setTableLoading(false);
-  }
-};
+      // Filter logic: Column AQ has value AND Column AO is null/empty
+      const activeEmployees = processedData.filter(
+        (employee) => employee.columnAQ && !employee.columnAO
+      );
 
-const fetchLeavingData = async () => {
+      setJoiningData(activeEmployees);
+      
+    } catch (error) {
+      console.error('Error fetching joining data:', error);
+      setError(error.message);
+      toast.error(`Failed to load joining data: ${error.message}`);
+    } finally {
+      setLoading(false);
+      setTableLoading(false);
+    }
+  };
+
+  const fetchLeavingData = async () => {
     setLoading(true);
     setTableLoading(true);
     setError(null);
@@ -168,17 +144,16 @@ const fetchLeavingData = async () => {
         workingLocation: row[9] || '', 
         designation: row[10] || '', 
         salary: row[11] || '', 
-        plannedDate: row[12] || '', 
+        plannedDate: row[12] || '', // Column M (index 12)
         actual: row[13] || ''
       }));
 
-    
-      setLeavingData(processedData);
+      // Filter logic: plannedDate (Column M) has value
+      const leavingEmployees = processedData.filter(
+        employee => employee.plannedDate
+      );
       
-      // const historyTasks = processedData.filter(
-      //   task => task.plannedDate && task.actual
-      // );
-      // setHistoryData(historyTasks);
+      setLeavingData(leavingEmployees);
      
     } catch (error) {
       console.error('Error fetching leaving data:', error);
@@ -190,19 +165,10 @@ const fetchLeavingData = async () => {
     }
   };
 
-useEffect(() => {
- 
-  fetchJoiningData(); // Add this line
-  fetchLeavingData()
-}, []);
-
-  // Active employees (not in leaving data)
-  // const joiningEmployees = employeeData.filter(employee => 
-  //   !leavingData.some(leaving => leaving.employeeId === employee.employeeId)
-  // );
-
-  // // Employees who have left
-  // const leavingEmployees = leavingData;
+  useEffect(() => {
+    fetchJoiningData();
+    fetchLeavingData();
+  }, []);
 
   const filteredJoiningData = joiningData.filter(item => {
     const matchesSearch = item.candidateName?.toLowerCase().includes(searchTerm.toLowerCase()) ||

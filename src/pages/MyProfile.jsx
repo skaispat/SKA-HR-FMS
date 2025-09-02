@@ -57,7 +57,7 @@ const MyProfile = () => {
         timestamp: row[getIndex('Timestamp')] || '',
         joiningNo: row[getIndex('Employee ID')] || '',
         candidateName: row[getIndex('Name As Per Aadhar')] || '',
-         candidatePhoto: row[getIndex("Candidate's Photo")] || '',
+        candidatePhoto: row[getIndex("Candidate's Photo")] || '',
         fatherName: row[getIndex('Father Name')] || '',
         dateOfJoining: row[getIndex('Date Of Joining')] || '',
         joiningPlace: row[getIndex('Joining Place')] || '',
@@ -75,24 +75,50 @@ const MyProfile = () => {
         aadharNo: row[getIndex('Aadhar Card No')] || '',
       }));
 
-      
       // Filter data for the current user
       const filteredData = processedData.filter(task => 
         task.candidateName?.trim().toLowerCase() === userName.trim().toLowerCase()
       );
 
-     // Inside fetchJoiningData(), after filtering user data
-if (filteredData.length > 0) {
-  const profile = filteredData[0];
-  setProfileData(profile);
-  setFormData(profile);
-
-  // ✅ Store employeeId in localStorage
-  localStorage.setItem("employeeId", profile.joiningNo);
-} else {
-  toast.error('No profile data found for current user');
-}
-
+      if (filteredData.length > 0) {
+        const profile = filteredData[0];
+        
+        // Fetch profile image from ENQUIRY sheet
+        try {
+          const enquiryResponse = await fetch(
+            'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=ENQUIRY&action=fetch'
+          );
+          
+          if (enquiryResponse.ok) {
+            const enquiryResult = await enquiryResponse.json();
+            if (enquiryResult.success) {
+              const enquiryData = enquiryResult.data || enquiryResult;
+              const enquiryHeaders = enquiryData[0];
+              
+              // Find the column index for candidate photo (Column P, index 15)
+              const photoIndex = 15; // Column P is index 15 (0-based)
+              
+              // Find the row with matching employee ID
+              for (let i = 1; i < enquiryData.length; i++) {
+                const row = enquiryData[i];
+                if (row[0] === profile.joiningNo && row[photoIndex]) {
+                  profile.candidatePhoto = row[photoIndex];
+                  break;
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching profile image from ENQUIRY sheet:', error);
+          // Continue without the profile image if there's an error
+        }
+        
+        setProfileData(profile);
+        setFormData(profile);
+        localStorage.setItem("employeeId", profile.joiningNo);
+      } else {
+        toast.error('No profile data found for current user');
+      }
       
     } catch (error) {
       console.error('Error fetching joining data:', error);
@@ -114,109 +140,108 @@ if (filteredData.length > 0) {
     }));
   };
 
-
   const handleSave = async () => {
-  try {
-    setLoading(true);
-    
-    // 1. Fetch current data from JOINING sheet
-    const fullDataResponse = await fetch(
-      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch'
-    );
-    
-    if (!fullDataResponse.ok) {
-      throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
-    }
-
-    const fullDataResult = await fullDataResponse.json();
-    const allData = fullDataResult.data || fullDataResult;
-
-    // 2. Find header row (assuming it's row 6 as in your original code)
-    let headerRowIndex = 5; // 0-based index for row 6
-    const headers = allData[headerRowIndex].map(h => h?.toString().trim());
-
-    // 3. Find Employee ID column index
-    const employeeIdIndex = headers.findIndex(h => h?.toLowerCase() === "employee id");
-    if (employeeIdIndex === -1) {
-      throw new Error("Could not find 'Employee ID' column");
-    }
-
-    // 4. Find the employee row index
-    const rowIndex = allData.findIndex((row, idx) =>
-      idx > headerRowIndex &&
-      row[employeeIdIndex]?.toString().trim() === profileData.joiningNo?.toString().trim()
-    );
-    
-    if (rowIndex === -1) throw new Error(`Employee ${profileData.joiningNo} not found`);
-
-    // 5. Get a copy of the existing row
-    let currentRow = [...allData[rowIndex]];
-
-    // 6. Apply updates to the row data
-    // Map form fields to their respective column indices
-    const headerMap = {
-      'Mobile No.': headers.findIndex(h => h?.toLowerCase() === 'mobile no.'),
-      'Family Mobile No.': headers.findIndex(h => h?.toLowerCase() === 'family mobile no.'),
-      'Personal Email-Id': headers.findIndex(h => h?.toLowerCase() === 'personal email-id'),
-      'Current Address': headers.findIndex(h => h?.toLowerCase() === 'current address')
-      // Add more fields as needed
-    };
-
-    // Only update fields that are editable in the form
-    if (headerMap['Mobile No.'] !== -1) {
-      currentRow[headerMap['Mobile No.']] = formData.mobileNo || '';
-    }
-    if (headerMap['Family Mobile No.'] !== -1) {
-      currentRow[headerMap['Family Mobile No.']] = formData.familyMobileNo || '';
-    }
-    if (headerMap['Personal Email-Id'] !== -1) {
-      currentRow[headerMap['Personal Email-Id']] = formData.email || '';
-    }
-    if (headerMap['Current Address'] !== -1) {
-      currentRow[headerMap['Current Address']] = formData.currentAddress || '';
-    }
-
-    // 7. Prepare payload
-    const payload = {
-      sheetName: "JOINING",
-      action: "update",
-      rowIndex: rowIndex + 1, // Convert to 1-based index
-      rowData: JSON.stringify(currentRow)
-    };
-
-    console.log("Final payload being sent:", payload);
-
-    // 8. Send update request
-    const response = await fetch(
-      "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams(payload).toString(),
+    try {
+      setLoading(true);
+      
+      // 1. Fetch current data from JOINING sheet
+      const fullDataResponse = await fetch(
+        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch'
+      );
+      
+      if (!fullDataResponse.ok) {
+        throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
       }
-    );
 
-    const result = await response.json();
-    console.log("Update result:", result);
+      const fullDataResult = await fullDataResponse.json();
+      const allData = fullDataResult.data || fullDataResult;
 
-    if (result.success) {
-      // Update local state only after successful API update
-      setProfileData(formData);
-      toast.success('Profile updated successfully!');
-      setIsEditing(false);
-    } else {
-      throw new Error(result.error || "Failed to update data");
+      // 2. Find header row (assuming it's row 6 as in your original code)
+      let headerRowIndex = 5; // 0-based index for row 6
+      const headers = allData[headerRowIndex].map(h => h?.toString().trim());
+
+      // 3. Find Employee ID column index
+      const employeeIdIndex = headers.findIndex(h => h?.toLowerCase() === "employee id");
+      if (employeeIdIndex === -1) {
+        throw new Error("Could not find 'Employee ID' column");
+      }
+
+      // 4. Find the employee row index
+      const rowIndex = allData.findIndex((row, idx) =>
+        idx > headerRowIndex &&
+        row[employeeIdIndex]?.toString().trim() === profileData.joiningNo?.toString().trim()
+      );
+      
+      if (rowIndex === -1) throw new Error(`Employee ${profileData.joiningNo} not found`);
+
+      // 5. Get a copy of the existing row
+      let currentRow = [...allData[rowIndex]];
+
+      // 6. Apply updates to the row data
+      // Map form fields to their respective column indices
+      const headerMap = {
+        'Mobile No.': headers.findIndex(h => h?.toLowerCase() === 'mobile no.'),
+        'Family Mobile No.': headers.findIndex(h => h?.toLowerCase() === 'family mobile no.'),
+        'Personal Email-Id': headers.findIndex(h => h?.toLowerCase() === 'personal email-id'),
+        'Current Address': headers.findIndex(h => h?.toLowerCase() === 'current address')
+        // Add more fields as needed
+      };
+
+      // Only update fields that are editable in the form
+      if (headerMap['Mobile No.'] !== -1) {
+        currentRow[headerMap['Mobile No.']] = formData.mobileNo || '';
+      }
+      if (headerMap['Family Mobile No.'] !== -1) {
+        currentRow[headerMap['Family Mobile No.']] = formData.familyMobileNo || '';
+      }
+      if (headerMap['Personal Email-Id'] !== -1) {
+        currentRow[headerMap['Personal Email-Id']] = formData.email || '';
+      }
+      if (headerMap['Current Address'] !== -1) {
+        currentRow[headerMap['Current Address']] = formData.currentAddress || '';
+      }
+
+      // 7. Prepare payload
+      const payload = {
+        sheetName: "JOINING",
+        action: "update",
+        rowIndex: rowIndex + 1, // Convert to 1-based index
+        rowData: JSON.stringify(currentRow)
+      };
+
+      console.log("Final payload being sent:", payload);
+
+      // 8. Send update request
+      const response = await fetch(
+        "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams(payload).toString(),
+        }
+      );
+
+      const result = await response.json();
+      console.log("Update result:", result);
+
+      if (result.success) {
+        // Update local state only after successful API update
+        setProfileData(formData);
+        toast.success('Profile updated successfully!');
+        setIsEditing(false);
+      } else {
+        throw new Error(result.error || "Failed to update data");
+      }
+
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error(`Failed to update profile: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
-
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    toast.error(`Failed to update profile: ${error.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleCancel = () => {
     setFormData(profileData || {});
@@ -233,7 +258,6 @@ if (filteredData.length > 0) {
   if (!profileData) {
     return <div className="page-content p-6">No profile data available</div>;
   }
-
 
   return (
     <div className="space-y-6 page-content p-6">
@@ -273,8 +297,21 @@ if (filteredData.length > 0) {
         {/* Profile Picture & Basic Info */}
         <div className="bg-white rounded-xl shadow-lg border p-6">
           <div className="text-center">
-            <div className="w-32 h-32 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-             <img className='h-10 w-10' src={profileData.candidatePhoto}/>
+            <div className="w-32 h-32 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
+              {profileData.candidatePhoto ? (
+                <img 
+                  src={profileData.candidatePhoto} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div className={`w-full h-full flex items-center justify-center ${profileData.candidatePhoto ? 'hidden' : 'flex'}`}>
+                <User size={48} className="text-indigo-400" />
+              </div>
             </div>
             <h2 className="text-xl font-bold text-gray-800">{profileData.candidateName}</h2>
             <p className="text-gray-600">{profileData.designation}</p>
