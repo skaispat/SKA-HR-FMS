@@ -72,7 +72,7 @@ const AfterJoiningWork = () => {
 
       const processedData = dataRows.map((row) => ({
         timestamp: row[getIndex("Timestamp")] || "",
-        joiningNo: row[getIndex("Employee ID")] || "",
+        joiningNo: row[getIndex("SKA-Joining ID")] || "",
         indentNo: row[getIndex("Indent No")] || "",
         enquiryNo: row[getIndex("Enquiry No")] || "",
         candidateName: row[getIndex("Name As Per Aadhar")] || "",
@@ -80,7 +80,7 @@ const AfterJoiningWork = () => {
         dateOfJoining: row[getIndex("Date Of Joining")] || "",
         joiningPlace: row[getIndex("Joining Place")] || "",
         designation: row[getIndex("Designation")] || "",
-        salary: row[getIndex("Salary")] || "",
+        salary: row[getIndex("Department")] || "",
         aadharPhoto: row[getIndex("Aadhar Frontside Photo")] || "",
         panCard: row[getIndex("Pan card")] || "",
         candidatePhoto: row[getIndex("Candidate's Photo")] || "",
@@ -140,116 +140,119 @@ const AfterJoiningWork = () => {
     fetchJoiningData();
   }, []);
 
-  const handleAfterJoiningClick = async (item) => {
-    // Reset form data first to prevent previous state from showing
-    setFormData({
-      checkSalarySlipResume: false,
-      offerLetterReceived: false,
-      welcomeMeeting: false,
-      biometricAccess: false,
-      officialEmailId: false,
-      assignAssets: false,
-      pfEsic: false,
-      companyDirectory: false,
-      assets: [],
-    });
-    
-    setSelectedItem(item);
-    setShowModal(true);
-    setLoading(true);
+const handleAfterJoiningClick = async (item) => {
+  setFormData({
+    checkSalarySlipResume: false,
+    offerLetterReceived: false,
+    welcomeMeeting: false,
+    biometricAccess: false,
+    officialEmailId: false,
+    assignAssets: false,
+    pfEsic: false,
+    companyDirectory: false,
+    assets: [],
+  });
+  
+  setSelectedItem(item);
+  setShowModal(true);
+  setLoading(true);
 
-    try {
-      const fullDataResponse = await fetch(
-        "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch"
-      );
+  try {
+    const fullDataResponse = await fetch(
+      "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch"
+    );
 
-      if (!fullDataResponse.ok) {
-        throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
-      }
-
-      const fullDataResult = await fullDataResponse.json();
-      const allData = fullDataResult.data || fullDataResult;
-
-      let headerRowIndex = allData.findIndex((row) =>
-        row.some((cell) =>
-          cell?.toString().trim().toLowerCase().includes("employee id")
-        )
-      );
-      if (headerRowIndex === -1) headerRowIndex = 5;
-
-      const headers = allData[headerRowIndex].map((h) => h?.toString().trim());
-
-      const employeeIdIndex = headers.findIndex(
-        (h) => h?.toLowerCase() === "employee id"
-      );
-      if (employeeIdIndex === -1) {
-        throw new Error("Could not find 'Employee ID' column");
-      }
-
-      const rowIndex = allData.findIndex(
-        (row, idx) =>
-          idx > headerRowIndex &&
-          row[employeeIdIndex]?.toString().trim() ===
-            item.joiningNo?.toString().trim()
-      );
-
-      if (rowIndex === -1)
-        throw new Error(`Employee ${item.joiningNo} not found`);
-
-      const startColumnIndex = 43;
-
-      const currentValues = {
-        checkSalarySlipResume:
-          allData[rowIndex][startColumnIndex + 2]
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        offerLetterReceived:
-          allData[rowIndex][startColumnIndex + 3]
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        welcomeMeeting:
-          allData[rowIndex][startColumnIndex + 4]
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        biometricAccess:
-          allData[rowIndex][startColumnIndex + 5]
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        officialEmailId:
-          allData[rowIndex][startColumnIndex + 6]
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        assignAssets:
-          allData[rowIndex][startColumnIndex + 7]
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        pfEsic:
-          allData[rowIndex][startColumnIndex + 8]
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        companyDirectory:
-          allData[rowIndex][startColumnIndex + 9]
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-      };
-
-      setFormData(currentValues);
-    } catch (error) {
-      console.error("Error fetching current values:", error);
-      // Keep the default reset values if there's an error
-      toast.error("Failed to load current values");
-    } finally {
-      setLoading(false);
+    if (!fullDataResponse.ok) {
+      throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
     }
-  };
+
+    const fullDataResult = await fullDataResponse.json();
+    const allData = fullDataResult.data || fullDataResult;
+
+    // Look for header row with "SKA-Joining ID" instead of "Employee ID"
+    let headerRowIndex = allData.findIndex((row) =>
+      row.some((cell) =>
+        cell?.toString().trim().toLowerCase().includes("ska-joining id")
+      )
+    );
+    if (headerRowIndex === -1) headerRowIndex = 5;
+
+    const headers = allData[headerRowIndex].map((h) => h?.toString().trim());
+
+    // Use "SKA-Joining ID" instead of "Employee ID"
+    const employeeIdIndex = headers.findIndex(
+      (h) => h?.toLowerCase() === "ska-joining id"
+    );
+    if (employeeIdIndex === -1) {
+      throw new Error("Could not find 'SKA-Joining ID' column");
+    }
+
+    const rowIndex = allData.findIndex(
+      (row, idx) =>
+        idx > headerRowIndex &&
+        row[employeeIdIndex]?.toString().trim() ===
+          item.joiningNo?.toString().trim()
+    );
+
+    if (rowIndex === -1)
+      throw new Error(`Employee ${item.joiningNo} not found`);
+
+    // Updated column indices
+    const actualColumnIndex = 27; // Column AB (0-based index: 27)
+    const startColumnIndex = 29; // Column AD (0-based index: 29)
+
+    const currentValues = {
+      checkSalarySlipResume:
+        allData[rowIndex][startColumnIndex] // Column AD
+          ?.toString()
+          .trim()
+          .toLowerCase() === "yes",
+      offerLetterReceived:
+        allData[rowIndex][startColumnIndex + 1] // Column AE
+          ?.toString()
+          .trim()
+          .toLowerCase() === "yes",
+      welcomeMeeting:
+        allData[rowIndex][startColumnIndex + 2] // Column AF
+          ?.toString()
+          .trim()
+          .toLowerCase() === "yes",
+      biometricAccess:
+        allData[rowIndex][startColumnIndex + 3] // Column AG
+          ?.toString()
+          .trim()
+          .toLowerCase() === "yes",
+      officialEmailId:
+        allData[rowIndex][startColumnIndex + 4] // Column AH
+          ?.toString()
+          .trim()
+          .toLowerCase() === "yes",
+      assignAssets:
+        allData[rowIndex][startColumnIndex + 5] // Column AI
+          ?.toString()
+          .trim()
+          .toLowerCase() === "yes",
+      pfEsic:
+        allData[rowIndex][startColumnIndex + 6] // Column AJ
+          ?.toString()
+          .trim()
+          .toLowerCase() === "yes",
+      companyDirectory:
+        allData[rowIndex][startColumnIndex + 7] // Column AK
+          ?.toString()
+          .trim()
+          .toLowerCase() === "yes",
+    };
+
+    setFormData(currentValues);
+  } catch (error) {
+    console.error("Error fetching current values:", error);
+    // Keep the default reset values if there's an error
+    toast.error("Failed to load current values");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleCheckboxChange = (name) => {
     setFormData((prev) => ({
@@ -258,167 +261,180 @@ const AfterJoiningWork = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setSubmitting(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setSubmitting(true);
 
-    if (!selectedItem.joiningNo || !selectedItem.candidateName) {
-      toast.error("Please fill all required fields");
-      setSubmitting(false);
-      return;
+  if (!selectedItem.joiningNo || !selectedItem.candidateName) {
+    toast.error("Please fill all required fields");
+    setSubmitting(false);
+    return;
+  }
+
+  try {
+    const fullDataResponse = await fetch(
+      "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch"
+    );
+    if (!fullDataResponse.ok) {
+      throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
     }
 
-    try {
-      const fullDataResponse = await fetch(
-        "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch"
-      );
-      if (!fullDataResponse.ok) {
-        throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
-      }
+    const fullDataResult = await fullDataResponse.json();
+    const allData = fullDataResult.data || fullDataResult;
+    let headerRowIndex = allData.findIndex((row) =>
+      row.some((cell) =>
+        cell?.toString().trim().toLowerCase().includes("ska-joining id")
+      )
+    );
+    if (headerRowIndex === -1) headerRowIndex = 5;
 
-      const fullDataResult = await fullDataResponse.json();
-      const allData = fullDataResult.data || fullDataResult;
+    const headers = allData[headerRowIndex].map((h) => h?.toString().trim());
+    const employeeIdIndex = headers.findIndex(
+      (h) => h?.toLowerCase() === "ska-joining id"
+    );
+    if (employeeIdIndex === -1) {
+      throw new Error("Could not find 'SKA-Joining ID' column");
+    }
 
-      let headerRowIndex = allData.findIndex((row) =>
-        row.some((cell) =>
-          cell?.toString().trim().toLowerCase().includes("employee id")
+    const rowIndex = allData.findIndex(
+      (row, idx) =>
+        idx > headerRowIndex &&
+        row[employeeIdIndex]?.toString().trim() ===
+          selectedItem.joiningNo?.toString().trim()
+    );
+    if (rowIndex === -1)
+      throw new Error(`Employee ${selectedItem.joiningNo} not found`);
+
+    const now = new Date();
+    const formattedTimestamp = `${now.getDate()}/${
+      now.getMonth() + 1
+    }/${now.getFullYear()} `;
+
+    const allFieldsYes =
+      formData.checkSalarySlipResume &&
+      formData.offerLetterReceived &&
+      formData.welcomeMeeting &&
+      formData.biometricAccess &&
+      formData.officialEmailId &&
+      formData.assignAssets &&
+      formData.pfEsic &&
+      formData.companyDirectory;
+
+    // Updated column indices
+    const actualColumnIndex = 27; // Column AB (0-based index: 27)
+    const startColumnIndex = 29; // Column AD (0-based index: 29)
+
+    const updatePromises = [];
+
+    if (allFieldsYes) {
+      updatePromises.push(
+        fetch(
+          "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              sheetName: "JOINING",
+              action: "updateCell",
+              rowIndex: (rowIndex + 1).toString(),
+              columnIndex: (actualColumnIndex + 1).toString(), // Column AB
+              value: formattedTimestamp,
+            }).toString(),
+          }
         )
       );
-      if (headerRowIndex === -1) headerRowIndex = 5;
-
-      const headers = allData[headerRowIndex].map((h) => h?.toString().trim());
-
-      const employeeIdIndex = headers.findIndex(
-        (h) => h?.toLowerCase() === "employee id"
-      );
-      if (employeeIdIndex === -1) {
-        throw new Error("Could not find 'Employee ID' column");
-      }
-
-      const rowIndex = allData.findIndex(
-        (row, idx) =>
-          idx > headerRowIndex &&
-          row[employeeIdIndex]?.toString().trim() ===
-            selectedItem.joiningNo?.toString().trim()
-      );
-      if (rowIndex === -1)
-        throw new Error(`Employee ${selectedItem.joiningNo} not found`);
-
-      const now = new Date();
-      const formattedTimestamp = `${now.getDate()}/${
-        now.getMonth() + 1
-      }/${now.getFullYear()} `;
-
-      const allFieldsYes =
-        formData.checkSalarySlipResume &&
-        formData.offerLetterReceived &&
-        formData.welcomeMeeting &&
-        formData.biometricAccess &&
-        formData.officialEmailId &&
-        formData.assignAssets &&
-        formData.pfEsic &&
-        formData.companyDirectory;
-
-      const startColumnIndex = 43;
-
-      const updatePromises = [];
-
-      if (allFieldsYes) {
-        updatePromises.push(
-          fetch(
-            "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              body: new URLSearchParams({
-                sheetName: "JOINING",
-                action: "updateCell",
-                rowIndex: (rowIndex + 1).toString(),
-                columnIndex: (startColumnIndex + 1).toString(),
-                value: formattedTimestamp,
-              }).toString(),
-            }
-          )
-        );
-      }
-
-      const fields = [
-        { value: formData.checkSalarySlipResume ? "Yes" : "No", offset: 2 },
-        { value: formData.offerLetterReceived ? "Yes" : "No", offset: 3 },
-        { value: formData.welcomeMeeting ? "Yes" : "No", offset: 4 },
-        { value: formData.biometricAccess ? "Yes" : "No", offset: 5 },
-        { value: formData.officialEmailId ? "Yes" : "No", offset: 6 },
-        { value: formData.assignAssets ? "Yes" : "No", offset: 7 },
-        { value: formData.pfEsic ? "Yes" : "No", offset: 8 },
-        { value: formData.companyDirectory ? "Yes" : "No", offset: 9 },
-      ];
-
-      fields.forEach((field) => {
-        updatePromises.push(
-          fetch(
-            "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              body: new URLSearchParams({
-                sheetName: "JOINING",
-                action: "updateCell",
-                rowIndex: (rowIndex + 1).toString(),
-                columnIndex: (startColumnIndex + field.offset + 1).toString(),
-                value: field.value,
-              }).toString(),
-            }
-          )
-        );
-      });
-
-      const responses = await Promise.all(updatePromises);
-      const results = await Promise.all(responses.map((r) => r.json()));
-
-      const hasError = results.some((result) => !result.success);
-      if (hasError) {
-        console.error("Some cell updates failed:", results);
-        throw new Error("Some cell updates failed");
-      }
-
-      if (allFieldsYes) {
-        toast.success("All conditions met! Actual date updated successfully.");
-      } else {
-        toast.success(
-          "Conditions updated successfully. Actual date will be updated when all conditions are met."
-        );
-      }
-
-      setShowModal(false);
-      fetchJoiningData();
-    } catch (error) {
-      console.error("Update error:", error);
-      toast.error(`Update failed: ${error.message}`);
-    } finally {
-      setLoading(false);
-      setSubmitting(false);
-    }
-  };
-
-  const formatDOB = (dateString) => {
-    if (!dateString) return "";
-
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return dateString;
     }
 
-    const day = date.getDate();
-    const month = date.getMonth();
-    const year = date.getFullYear().toString().slice(-2);
+    const fields = [
+      { value: formData.checkSalarySlipResume ? "Yes" : "No", offset: 0 }, // Column AD
+      { value: formData.offerLetterReceived ? "Yes" : "No", offset: 1 }, // Column AE
+      { value: formData.welcomeMeeting ? "Yes" : "No", offset: 2 }, // Column AF
+      { value: formData.biometricAccess ? "Yes" : "No", offset: 3 }, // Column AG
+      { value: formData.officialEmailId ? "Yes" : "No", offset: 4 }, // Column AH
+      { value: formData.assignAssets ? "Yes" : "No", offset: 5 }, // Column AI
+      { value: formData.pfEsic ? "Yes" : "No", offset: 6 }, // Column AJ
+      { value: formData.companyDirectory ? "Yes" : "No", offset: 7 }, // Column AK
+    ];
 
-    return `${day}/${month}/${year}`;
-  };
+    fields.forEach((field) => {
+      updatePromises.push(
+        fetch(
+          "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              sheetName: "JOINING",
+              action: "updateCell",
+              rowIndex: (rowIndex + 1).toString(),
+              columnIndex: (startColumnIndex + field.offset + 1).toString(),
+              value: field.value,
+            }).toString(),
+          }
+        )
+      );
+    });
+
+    const responses = await Promise.all(updatePromises);
+    const results = await Promise.all(responses.map((r) => r.json()));
+
+    const hasError = results.some((result) => !result.success);
+    if (hasError) {
+      console.error("Some cell updates failed:", results);
+      throw new Error("Some cell updates failed");
+    }
+
+    if (allFieldsYes) {
+      toast.success("All conditions met! Actual date updated successfully.");
+    } else {
+      toast.success(
+        "Conditions updated successfully. Actual date will be updated when all conditions are met."
+      );
+    }
+
+    setShowModal(false);
+    fetchJoiningData();
+  } catch (error) {
+    console.error("Update error:", error);
+    toast.error(`Update failed: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setSubmitting(false);
+  }
+};
+
+
+const formatDOB = (dateString) => {
+  if (!dateString) return "";
+
+  // Handle the format "2021-11-01"
+  if (dateString.includes('-')) {
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      const day = parts[2];
+      const month = parts[1];
+      const year = parts[0].slice(-2); // Get last 2 digits of year
+      return `${day}/${month}/${year}`;
+    }
+  }
+
+  // Fallback for other formats
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return dateString;
+  }
+
+  const day = date.getDate();
+  const month = date.getMonth() + 1; // Months are 0-indexed, so add 1
+  const year = date.getFullYear().toString().slice(-2);
+
+  return `${day}/${month}/${year}`;
+};
 
   const filteredPendingData = pendingData.filter((item) => {
     const matchesSearch =
@@ -445,7 +461,7 @@ const AfterJoiningWork = () => {
           <div className="relative w-full">
             <input
               type="text"
-              placeholder="Search by name or employee ID..."
+              placeholder="Search Something..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300   rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white   text-gray-500    "
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -496,7 +512,7 @@ const AfterJoiningWork = () => {
                       Action
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Employee ID
+                      SKA-Joining ID
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Name
@@ -511,7 +527,7 @@ const AfterJoiningWork = () => {
                       Designation
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Salary
+                      Department
                     </th>
                   </tr>
                 </thead>

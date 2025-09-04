@@ -15,11 +15,8 @@ const AfterLeavingWork = () => {
   const [formData, setFormData] = useState({
     resignationLetterReceived: false,
     resignationAcceptance: false,
-    handoverOfAssets: false,
-    idCard: false,
-    visitingCard: false,
-    cancellationOfEmailId: false,
-    biometricAccess: false,
+    handoverAssetsIdVisitingCard: false,
+    cancellationEmailBiometric: false,
     finalReleaseDate: '',
     removeBenefitEnrollment: false
   });
@@ -95,15 +92,11 @@ const AfterLeavingWork = () => {
   }, []);
 
   const handleAfterLeavingClick = async (item) => {
-    // Reset form data first to prevent previous state from showing
     setFormData({
       resignationLetterReceived: false,
       resignationAcceptance: false,
-      handoverOfAssets: false,
-      idCard: false,
-      visitingCard: false,
-      cancellationOfEmailId: false,
-      biometricAccess: false,
+      handoverAssetsIdVisitingCard: false,
+      cancellationEmailBiometric: false,
       finalReleaseDate: '',
       removeBenefitEnrollment: false
     });
@@ -113,7 +106,6 @@ const AfterLeavingWork = () => {
     setLoading(true);
 
     try {
-      // Fetch current values from the sheet
       const fullDataResponse = await fetch(
         'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=LEAVING&action=fetch'
       );
@@ -125,7 +117,6 @@ const AfterLeavingWork = () => {
       const fullDataResult = await fullDataResponse.json();
       const allData = fullDataResult.data || fullDataResult;
 
-      // Find header row
       let headerRowIndex = allData.findIndex(row =>
         row.some(cell => cell?.toString().trim().toLowerCase().includes('employee id'))
       );
@@ -150,8 +141,8 @@ const AfterLeavingWork = () => {
       }
 
       // Get current values from the sheet
-      // Column W is index 22 (0-based)
-      const finalReleaseDateValue = allData[rowIndex][22] || "";
+      // Final Release Date is now at column T (index 19)
+      const finalReleaseDateValue = allData[rowIndex][19] || "";
       
       // Format the date for the input field (YYYY-MM-DD format)
       let formattedDate = "";
@@ -178,19 +169,13 @@ const AfterLeavingWork = () => {
           allData[rowIndex][15]?.toString().trim().toLowerCase() === "yes",
         resignationAcceptance: 
           allData[rowIndex][16]?.toString().trim().toLowerCase() === "yes",
-        handoverOfAssets: 
+        handoverAssetsIdVisitingCard: 
           allData[rowIndex][17]?.toString().trim().toLowerCase() === "yes",
-        idCard: 
+        cancellationEmailBiometric: 
           allData[rowIndex][18]?.toString().trim().toLowerCase() === "yes",
-        visitingCard: 
-          allData[rowIndex][19]?.toString().trim().toLowerCase() === "yes",
-        cancellationOfEmailId: 
-          allData[rowIndex][20]?.toString().trim().toLowerCase() === "yes",
-        biometricAccess: 
-          allData[rowIndex][21]?.toString().trim().toLowerCase() === "yes",
         finalReleaseDate: formattedDate,
         removeBenefitEnrollment: 
-          allData[rowIndex][23]?.toString().trim().toLowerCase() === "yes"
+          allData[rowIndex][20]?.toString().trim().toLowerCase() === "yes"
       };
 
       setFormData(currentValues);
@@ -269,11 +254,8 @@ const AfterLeavingWork = () => {
       const allConditionsMet = 
         formData.resignationLetterReceived &&
         formData.resignationAcceptance &&
-        formData.handoverOfAssets &&
-        formData.idCard &&
-        formData.visitingCard &&
-        formData.cancellationOfEmailId &&
-        formData.biometricAccess &&
+        formData.handoverAssetsIdVisitingCard &&
+        formData.cancellationEmailBiometric &&
         formData.removeBenefitEnrollment &&
         formData.finalReleaseDate;
 
@@ -305,12 +287,9 @@ const AfterLeavingWork = () => {
       const fields = [
         { value: formData.resignationLetterReceived ? "Yes" : "No", offset: 15 },
         { value: formData.resignationAcceptance ? "Yes" : "No", offset: 16 },
-        { value: formData.handoverOfAssets ? "Yes" : "No", offset: 17 },
-        { value: formData.idCard ? "Yes" : "No", offset: 18 },
-        { value: formData.visitingCard ? "Yes" : "No", offset: 19 },
-        { value: formData.cancellationOfEmailId ? "Yes" : "No", offset: 20 },
-        { value: formData.biometricAccess ? "Yes" : "No", offset: 21 },
-        { value: formData.removeBenefitEnrollment ? "Yes" : "No", offset: 23 }
+        { value: formData.handoverAssetsIdVisitingCard ? "Yes" : "No", offset: 17 },
+        { value: formData.cancellationEmailBiometric ? "Yes" : "No", offset: 18 },
+        { value: formData.removeBenefitEnrollment ? "Yes" : "No", offset: 20 }
       ];
 
       // Convert final release date to DD/MM/YYYY
@@ -324,7 +303,7 @@ const AfterLeavingWork = () => {
         }
       }
 
-      // Add final release date update
+      // Add final release date update (now at column T, index 19)
       updatePromises.push(
         fetch(
           "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
@@ -337,7 +316,7 @@ const AfterLeavingWork = () => {
               sheetName: "LEAVING",
               action: "updateCell",
               rowIndex: (rowIndex + 1).toString(),
-              columnIndex: "23", // Column W (Final Release Date)
+              columnIndex: "20", // Column T (Final Release Date) - index 19 + 1
               value: finalReleaseDateValue,
             }).toString(),
           }
@@ -549,11 +528,8 @@ const AfterLeavingWork = () => {
                 {[
                   { key: 'resignationLetterReceived', label: 'Resignation Letter Received' },
                   { key: 'resignationAcceptance', label: 'Resignation Acceptance' },
-                  { key: 'handoverOfAssets', label: 'Handover Of Assets' },
-                  { key: 'idCard', label: 'ID Card' },
-                  { key: 'visitingCard', label: 'Visiting Card' },
-                  { key: 'cancellationOfEmailId', label: 'Cancellation Of Email ID' },
-                  { key: 'biometricAccess', label: 'Biometric Access' },
+                  { key: 'handoverAssetsIdVisitingCard', label: 'Handover Of Assets, ID Card & Visiting Card' },
+                  { key: 'cancellationEmailBiometric', label: 'Cancellation Of Email ID & Biometric Access' },
                   { key: 'removeBenefitEnrollment', label: 'Remove Benefit Enrollment' }
                 ].map((item) => (
                   <div key={item.key} className="flex items-center">

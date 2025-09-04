@@ -167,8 +167,7 @@ const Dashboard = () => {
       }
   
       // Update state
-      setTotalEmployee(dataRows.length);
-      setActiveEmployee(activeCount);
+      setActiveEmployee(dataRows.length);
       
       // Return both counts and monthly hiring data
       return { 
@@ -212,27 +211,29 @@ const Dashboard = () => {
       const dateIndex = headers.findIndex(
         (h) => normalize(h) === "date of leaving"
       );
-  
-      if (dateIndex === -1) {
-        console.warn("⚠️ 'Date Of Leaving' column not found");
-        setLeftEmployee(dataRows.length);
-        setLeaveThisMonth(0);
-        return { total: dataRows.length, monthlyLeaving: {} };
-      }
-  
+      
+      // Check for Column D (index 3) for "Left This Month" count
+      let thisMonthCount = 0;
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
-  
-      const thisMonthCount = dataRows.filter(row => {
-        const parsedDate = parseSheetDate(row[dateIndex]);
-        return (
-          parsedDate &&
-          parsedDate.getMonth() === currentMonth &&
-          parsedDate.getFullYear() === currentYear
-        );
-      }).length;
-  
+      
+      if (dataRows.length > 0) {
+        // Use column D (index 3) for date of leaving
+        thisMonthCount = dataRows.filter(row => {
+          const dateStr = row[3]; // Column D (index 3)
+          if (dateStr) {
+            const parsedDate = parseSheetDate(dateStr);
+            return (
+              parsedDate &&
+              parsedDate.getMonth() === currentMonth &&
+              parsedDate.getFullYear() === currentYear
+            );
+          }
+          return false;
+        }).length;
+      }
+
       // Count leaving by month
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const monthlyLeaving = {};
@@ -298,6 +299,9 @@ const Dashboard = () => {
           fetchJoiningCount(),
           fetchLeaveCount()
         ]);
+        
+        // Calculate total employees (JOINING + LEAVING)
+        setTotalEmployee(joiningResult.total + leavingResult.total);
         
         // Prepare the monthly hiring data for the chart
         const monthlyData = prepareMonthlyHiringData(

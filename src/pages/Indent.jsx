@@ -15,11 +15,24 @@ const Indent = () => {
     socialSite: '',
     indentNumber: '',
     timestamp: '',
+    experience: '', // New field for experience input
+    socialSiteTypes: [], // New field for social site types
   });
-   const [indentData, setIndentData] = useState([]);
+  const [indentData, setIndentData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Social site options
+  const socialSiteOptions = [
+    'Instagram',
+    'Facebook',
+    'LinkedIn',
+    'Twitter (X)',
+    'Youtube',
+    'Whatsapp',
+    'Indeed'
+  ];
   // const [lastIndentNumber, setLastIndentNumber] = useState(0);
 
 // useEffect(() => {
@@ -106,6 +119,8 @@ const generateIndentNumber = async () => {
          const noOFPostIndex = headers.indexOf('Number Of Posts');
          const completionDateIndex = headers.indexOf('Completion Date');
          const socialSiteIndex = headers.indexOf('Social Site');
+         const experienceIndex = headers.indexOf('Experience')
+         const socialSiteTypesIndex = headers.indexOf('Social Site Types')
       // Add other column indices as needed
       
       // Process the data
@@ -118,6 +133,8 @@ const generateIndentNumber = async () => {
         noOfPost:row[noOFPostIndex],
         completionDate:row[completionDateIndex],
         socialSite:row[socialSiteIndex],
+        experience:row[experienceIndex],
+        socialSiteTypes:row[socialSiteTypesIndex],
         // Add other fields as needed
       }));
       setIndentData(processedData)
@@ -242,7 +259,25 @@ const fetchLastIndentNumber = async () => {
     }));
   };
 
-const handleSubmit = async (e) => {
+  const handleSocialSiteTypeChange = (e) => {
+    const { value, checked } = e.target;
+    
+    setFormData(prev => {
+      if (checked) {
+        return {
+          ...prev,
+          socialSiteTypes: [...prev.socialSiteTypes, value]
+        };
+      } else {
+        return {
+          ...prev,
+          socialSiteTypes: prev.socialSiteTypes.filter(type => type !== value)
+        };
+      }
+    });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (
@@ -256,6 +291,18 @@ const handleSubmit = async (e) => {
       return;
     }
 
+    // Additional validation for experience if prefer is "Experience"
+    if (formData.prefer === 'Experience' && !formData.experience) {
+      toast.error('Please enter experience details');
+      return;
+    }
+
+    // Additional validation for social site types if socialSite is "Yes"
+    if (formData.socialSite === 'Yes' && formData.socialSiteTypes.length === 0) {
+      toast.error('Please select at least one social site type');
+      return;
+    }
+
     try {
       setSubmitting(true);
       // Generate indent number and timestamp
@@ -266,6 +313,7 @@ const handleSubmit = async (e) => {
       const formattedDate = formatDateForSheet(formData.competitionDate);
       console.log(indentNumber);
 
+      // Prepare row data with additional columns for experience and social site types
       const rowData = [
         timestamp,
         indentNumber,
@@ -275,7 +323,15 @@ const handleSubmit = async (e) => {
         formData.numberOfPost,
         formattedDate,
         formData.socialSite,
-        "NeedMore"
+        "NeedMore",
+        "", // Column J (empty)
+        "", // Column K (empty)
+        "", // Column L (empty)
+        "", // Column M (empty)
+        "", // Column N (empty)
+        "", // Column O (empty)
+        formData.prefer === 'Experience' ? formData.experience : "", // Column P - Experience
+        formData.socialSite === 'Yes' ? formData.socialSiteTypes.join(', ') : "" // Column Q - Social Site Types
       ];
 
       const response = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec', {
@@ -300,6 +356,8 @@ const handleSubmit = async (e) => {
           socialSite: '',
           indentNumber: '',
           timestamp: '',
+          experience: '',
+          socialSiteTypes: [],
         });
         setShowModal(false);
         // Refresh the table data
@@ -337,6 +395,8 @@ const handleSubmit = async (e) => {
       socialSite: '',
       indentNumber: '',
       timestamp: '',
+      experience: '',
+      socialSiteTypes: [],
     });
     setShowModal(false);
   };
@@ -345,16 +405,32 @@ const handleSubmit = async (e) => {
     <div className="space-y-6 page-content p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Indent</h1>
-        <button 
+        <button
           onClick={() => setShowModal(true)}
           className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-all duration-200"
           disabled={loading}
         >
           {loading ? (
             <>
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
               Loading...
             </>
@@ -370,16 +446,23 @@ const handleSubmit = async (e) => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="flex justify-between items-center p-6 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-800">Create New Indent</h3>
-              <button onClick={handleCancel} className="text-gray-500 hover:text-gray-700">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+              <h3 className="text-lg font-medium text-gray-800">
+                Create New Indent
+              </h3>
+              <button
+                onClick={handleCancel}
+                className="text-gray-500 hover:text-gray-700"
+              >
                 <X size={20} />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Post *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Post *
+                </label>
                 <input
                   type="text"
                   name="post"
@@ -390,9 +473,11 @@ const handleSubmit = async (e) => {
                   required
                 />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Gender *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gender *
+                </label>
                 <select
                   name="gender"
                   value={formData.gender}
@@ -408,22 +493,43 @@ const handleSubmit = async (e) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Prefer</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Prefer
+                </label>
                 <select
                   name="prefer"
                   value={formData.prefer}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  required
                 >
                   <option value="">Any</option>
                   <option value="Experience">Experience</option>
-                  <option value="Male">Fresher</option>
+                  <option value="Fresher">Fresher</option>
                 </select>
               </div>
 
+              {/* Experience input field - only show when prefer is Experience */}
+              {formData.prefer === "Experience" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Experience *
+                  </label>
+                  <input
+                    type="text"
+                    name="experience"
+                    value={formData.experience}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Enter experience details"
+                    required={formData.prefer === "Experience"}
+                  />
+                </div>
+              )}
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Number Of Post *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Number Of Post *
+                </label>
                 <input
                   type="number"
                   name="numberOfPost"
@@ -437,7 +543,9 @@ const handleSubmit = async (e) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Competition Date *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Competition Date *
+                </label>
                 <input
                   type="date"
                   name="competitionDate"
@@ -447,23 +555,53 @@ const handleSubmit = async (e) => {
                   required
                 />
               </div>
- <div> 
-  <label className="block text-sm font-medium text-gray-700 mb-1">Social Site *</label>
-  <select 
-    name="socialSite"
-    value={formData.socialSite}
-    onChange={handleInputChange}
-    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    required
-  >
-    <option value="">Select</option>
-    <option value="Yes">Yes</option>
-    <option value="No">No</option>
-  </select>
-</div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Social Site *
+                </label>
+                <select
+                  name="socialSite"
+                  value={formData.socialSite}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                >
+                  <option value="">Select</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
 
+              {/* Social Site Types checklist - only show when socialSite is Yes */}
+              {formData.socialSite === "Yes" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Social Site Types *
+                  </label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
+                    {socialSiteOptions.map((option) => (
+                      <div key={option} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={option}
+                          value={option}
+                          checked={formData.socialSiteTypes.includes(option)}
+                          onChange={handleSocialSiteTypeChange}
+                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        />
+                        <label
+                          htmlFor={option}
+                          className="ml-2 block text-sm text-gray-700"
+                        >
+                          {option}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-               <div className="flex justify-end space-x-2 pt-4">
+              <div className="flex justify-end space-x-2 pt-4">
                 <button
                   type="button"
                   onClick={handleCancel}
@@ -479,13 +617,31 @@ const handleSubmit = async (e) => {
                 >
                   {submitting ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       Processing...
                     </>
-                  ) : 'Submit'}
+                  ) : (
+                    "Submit"
+                  )}
                 </button>
               </div>
             </form>
@@ -495,92 +651,145 @@ const handleSubmit = async (e) => {
 
       {/* Info Card */}
       <div className="bg-white rounded-xl shadow-lg border p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Indent Management</h2>
+        <h2 className="text-lg font-bold text-gray-800 mb-4">
+          Indent Management
+        </h2>
         <p className="text-gray-600">
-          Create new indents for job positions. Once created, indents will be available in the Social Site section for further processing.
+          Create new indents for job positions. Once created, indents will be
+          available in the Social Site section for further processing.
         </p>
       </div>
 
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-  <div className="overflow-x-auto">
-    {/* Add max-height and overflow-y to the table container */}
-    <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
-      <table className="min-w-full divide-y divide-gray-200 shadow">
-        <thead className="bg-gray-50 sticky top-0 z-10">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Indent Number</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Post</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prefer</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. of Post</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completion Date</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Social Site</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
-          {tableLoading ? (
-            <tr>
-              <td colSpan="7" className="px-6 py-12 text-center">
-                <div className="flex justify-center flex-col items-center">
-                  <div className="w-6 h-6 border-4 border-blue-500 border-dashed rounded-full animate-spin mb-2"></div>
-                  <span className="text-gray-600 text-sm">Loading indent data...</span>
-                </div>
-              </td>
-            </tr>
-          ) : indentData.length === 0 ? (
-            <tr>
-              <td colSpan="7" className="px-6 py-12 text-center">
-                <p className="text-gray-500">No indent data found.</p>
-              </td>
-            </tr>
-          ) : (
-            indentData.map((item, index) => (
-              <tr key={index} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {item.indentNumber}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.post}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.gender}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {item.prefer}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {item.noOfPost}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div className="text-sm text-gray-900 break-words">
-                    {item.completionDate ? (() => {
-                      const date = new Date(item.completionDate);
-                      if (!date || isNaN(date.getTime())) return "Invalid date";
-                      const day = date.getDate().toString().padStart(2, '0');
-                      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                      const year = date.getFullYear();
-                      const hours = date.getHours().toString().padStart(2, '0');
-                      const minutes = date.getMinutes().toString().padStart(2, '0');
-                      const seconds = date.getSeconds().toString().padStart(2, '0');
-                      return (
-                        <div>
-                          <div className="font-medium break-words">
-                            {`${day}/${month}/${year}`}
-                          </div>
-                          <div className="text-xs text-gray-500 break-words">
-                            {`${hours}:${minutes}:${seconds}`}
-                          </div>
+        <div className="overflow-x-auto">
+          {/* Add max-height and overflow-y to the table container */}
+          <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
+            <table className="min-w-full divide-y divide-gray-200 shadow">
+              <thead className="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Indent Number
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Post
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Gender
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Prefer
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Experience
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    No. of Post
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Completion Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Social Site
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Social Site Types
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {tableLoading ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <div className="flex justify-center flex-col items-center">
+                        <div className="w-6 h-6 border-4 border-blue-500 border-dashed rounded-full animate-spin mb-2"></div>
+                        <span className="text-gray-600 text-sm">
+                          Loading indent data...
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : indentData.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <p className="text-gray-500">No indent data found.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  indentData.map((item, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {item.indentNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.post}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.gender}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.prefer}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.experience}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.noOfPost}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="text-sm text-gray-900 break-words">
+                          {item.completionDate
+                            ? (() => {
+                                const date = new Date(item.completionDate);
+                                if (!date || isNaN(date.getTime()))
+                                  return "Invalid date";
+                                const day = date
+                                  .getDate()
+                                  .toString()
+                                  .padStart(2, "0");
+                                const month = (date.getMonth() + 1)
+                                  .toString()
+                                  .padStart(2, "0");
+                                const year = date.getFullYear();
+                                const hours = date
+                                  .getHours()
+                                  .toString()
+                                  .padStart(2, "0");
+                                const minutes = date
+                                  .getMinutes()
+                                  .toString()
+                                  .padStart(2, "0");
+                                const seconds = date
+                                  .getSeconds()
+                                  .toString()
+                                  .padStart(2, "0");
+                                return (
+                                  <div>
+                                    <div className="font-medium break-words">
+                                      {`${day}/${month}/${year}`}
+                                    </div>
+                                    <div className="text-xs text-gray-500 break-words">
+                                      {`${hours}:${minutes}:${seconds}`}
+                                    </div>
+                                  </div>
+                                );
+                              })()
+                            : "—"}
                         </div>
-                      );
-                    })() : "—"}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.socialSite}</td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.socialSite}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.socialSiteTypes}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

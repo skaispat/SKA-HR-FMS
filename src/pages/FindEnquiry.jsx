@@ -82,7 +82,8 @@ const [formData, setFormData] = useState({
             socialSite: row[getIndex('Social Site')],
             status: row[getIndex('Status')],
             plannedDate: row[getIndex('Planned 2')],
-            actual: row[getIndex('Actual 2')]
+            actual: row[getIndex('Actual 2')],
+            experience : row[getIndex('Experience')],
           }));
          const pendingTasks = processedData.filter(
         task => task.plannedDate && !task.actual
@@ -250,7 +251,7 @@ const [formData, setFormData] = useState({
       referenceBy: '',
       presentAddress: '',
       aadharNo: '',
-      status: 'NeedMore'
+      status: 'NeedMore',
     });
     setShowModal(true);
   };
@@ -600,7 +601,7 @@ const handleSubmit = async (e) => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.indentNo}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.post}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.gender}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.prefer || '-'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.prefer || '-'} {item.experience}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.numberOfPost}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.competitionDate ? new Date(item.competitionDate).toLocaleDateString() : '-'}

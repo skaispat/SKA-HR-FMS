@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, User, Lock } from 'lucide-react';
+import { Users, User, Lock, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../store/authStore';
 
@@ -54,16 +54,16 @@ setSubmitting(true)
   };
 
   return (
-    <div className="min-h-screen  flex items-center justify-center p-4 ">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-2xl ">
-        <div className="text-center ">
-          <div className="flex justify-center">
-            <div className="h-16 w-16 bg-white rounded-full flex items-center justify-center">
-              <Users className="h-8 w-8 text-indigo-700" />
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="max-w-md w-full space-y-8 p-8 rounded-2xl shadow-lg border border-gray-100">
+        <div className="text-center">
+          <div className="flex justify-center mb-6">
+            <div className="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center">
+              <FileText className="h-8 w-8 text-white" />
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-indigo-700">HR FMS</h2>
-          <p className="mt-2 text-sm text-indigo-700 opacity-80">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">HR FMS</h2>
+          <p className="text-sm text-gray-500">
             Human Resource & File Management System
           </p>
         </div>
@@ -71,10 +71,10 @@ setSubmitting(true)
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="sr-only">Username</label>
+              <label htmlFor="username" className="block text-sm font-medium text-blue-600 mb-2">Username</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-indigo-700 " />
+                  <User className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   id="username"
@@ -83,17 +83,17 @@ setSubmitting(true)
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="appearance-none relative block w-full pl-10 pr-3 py-3  border-gray-500  border   text-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-700 focus:border-white focus:z-10 sm:text-sm bg-white bg-opacity-10"
-                  placeholder="Username"
+                  className="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white"
+                  placeholder="Enter your username"
                 />
               </div>
             </div>
             
             <div>
-              <label htmlFor="password" className="sr-only">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium text-blue-600 mb-2">Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-indigo-700 " />
+                  <Lock className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
                   id="password"
@@ -102,23 +102,17 @@ setSubmitting(true)
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-500   text-indigo-700 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-700 focus:border-white focus:z-10 sm:text-sm bg-white bg-opacity-10"
-                  placeholder="Password"
+                  className="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white"
+                  placeholder="Enter your password"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            {/* <button
-              type="submit"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-700  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-200"
-            >
-              Sign in
-            </button> */}
              <button
                   type="submit"
-                  className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-700  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-200 ${
+                  className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 ${
                     submitting ? 'opacity-75 cursor-not-allowed' : ''
                   }`}
                   disabled={submitting}
@@ -134,17 +128,11 @@ setSubmitting(true)
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      <span>   Sign in....</span>
+                      <span>Sign in....</span>
                     </div>
-                  ) : '   Sign in'}
+                  ) : 'Sign in'}
                 </button>
           </div>
-
-          {/* <div className="text-sm text-center text-indigo-700 opacity-80">
-            <p>Default Credentials:</p>
-            <p>Admin: admin / admin123</p>
-            <p>Employee: user / user123</p>
-          </div> */}
         </form>
       </div>
     </div>

@@ -58,25 +58,26 @@ const fetchJoiningData = async () => {
 
     const processedData = dataRows.map((row, index) => ({
       rowIndex: index + 7, // Actual row number in sheet (starting from row 7)
-      employeeNo: row[getIndex('Employee ID')] || '',
-      candidateName: row[getIndex('Name As Per Aadhar')] || '',
-      fatherName: row[getIndex('Father Name')] || '',
-      dateOfJoining: row[getIndex('Date Of Joining')] || '',
-      designation: row[getIndex('Designation')] || '',
-      salary: row[getIndex('Salary')] || '',
+      employeeNo: row[getIndex('SKA-Joining ID')] || row[1] || '', // Column B (index 1)
+      candidateName: row[getIndex('Name As Per Aadhar')] || row[2] || '', // Column C (index 2)
+      fatherName: row[getIndex('Father Name')] || row[3] || '', // Column D (index 3)
+      dateOfJoining: row[getIndex('Date Of Joining')] || row[4] || '', // Column E (index 4)
+      designation: row[getIndex('Designation')] || row[5] || '', // Column F (index 5)
+      department: row[getIndex('Department')] || row[20] || '', // Column U (index 20)
       mobileNo: row[getIndex('Mobile No.')] || '',
       firmName: row[getIndex('Joining Company Name')] || '', 
       workingPlace: row[getIndex('Joining Place')] || '',
       plannedDate: row[getIndex('Planned Date')] || '',
       actual: row[getIndex('Actual')] || '',
       // Get values from specific column indices
-      columnAO: row[40] || '', // Column AO (index 40)
-      columnAQ: row[42] || '', // Column AQ (index 42)
+      leavingDate: row[24] || '', // Column Y (index 24)
+      reason: row[25] || '', // Column Z (index 25)
+      columnAB: row[27] || '', // Column AB (index 27)
     }));
 
     // Filter for employees with non-null value in AQ and null value in AO
     const pendingLeavingTasks = processedData.filter(
-      (task) => task.columnAQ && !task.columnAO
+      (task) => task.columnAB && !task.leavingDate
     );
     
     setPendingData(pendingLeavingTasks);
@@ -132,7 +133,7 @@ const fetchJoiningData = async () => {
         dateOfJoining: row[8] || '', 
         workingLocation: row[9] || '', 
         designation: row[10] || '', 
-        salary: row[11] || '', 
+        department: row[11] || '', 
         plannedDate: row[12] || '', 
         actual: row[13] || '', 
       }));
@@ -176,7 +177,6 @@ const fetchJoiningData = async () => {
     return matchesSearch;
   });
 
-  // Rest of your component remains the same...
   const handleLeavingClick = (item) => {
     setSelectedItem(item);
     setFormData({
@@ -198,13 +198,18 @@ const fetchJoiningData = async () => {
   const formatDOB = (dateString) => {
     if (!dateString) return '';
     
+    // If it's already in dd/mm/yyyy format, return as is
+    if (typeof dateString === 'string' && dateString.includes('/')) {
+      return dateString;
+    }
+    
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
       return dateString;
     }
     
-    const day = date.getDate();
-    const month = date.getMonth() + 1; // Fixed: months are 0-indexed
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
     
     return `${day}/${month}/${year}`;
@@ -237,15 +242,15 @@ const handleSubmit = async (e) => {
       formatDOB(selectedItem.dateOfJoining),
       selectedItem.workingPlace,
       selectedItem.designation,
-      selectedItem.salary,
+      selectedItem.department, // Changed from salary to department
     ];
 
-    // First, update the JOINING sheet with leaving date
+    // First, update the JOINING sheet with leaving date (Column Y, index 24)
     const updateJoiningParams = new URLSearchParams({
       sheetName: 'JOINING',
       action: 'updateCell',
-      rowIndex: selectedItem.rowIndex.toString(), // Use the actual row index from the JOINING sheet
-      columnIndex: '41', // Column AO is index 41 (0-based index + 1 for Sheets)
+      rowIndex: selectedItem.rowIndex.toString(),
+      columnIndex: '25', // Column Y is index 25 (0-based index + 1 for Sheets)
       value: formattedLeavingDate,
     });
 
@@ -266,6 +271,34 @@ const handleSubmit = async (e) => {
     
     if (!updateResult.success) {
       throw new Error(updateResult.error || 'Failed to update JOINING sheet');
+    }
+
+    // Update reason in JOINING sheet (Column Z, index 25)
+    const updateReasonParams = new URLSearchParams({
+      sheetName: 'JOINING',
+      action: 'updateCell',
+      rowIndex: selectedItem.rowIndex.toString(),
+      columnIndex: '26', // Column Z is index 26 (0-based index + 1 for Sheets)
+      value: formData.reasonOfLeaving,
+    });
+
+    const updateReasonResponse = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec', {
+      method: 'POST',
+      body: updateReasonParams,
+    });
+
+    const updateReasonText = await updateReasonResponse.text();
+    let updateReasonResult;
+    
+    try {
+      updateReasonResult = JSON.parse(updateReasonText);
+    } catch (parseError) {
+      console.error('Failed to parse JOINING reason update response:', updateReasonText);
+      throw new Error(`Server returned invalid response: ${updateReasonText.substring(0, 100)}...`);
+    }
+    
+    if (!updateReasonResult.success) {
+      throw new Error(updateReasonResult.error || 'Failed to update reason in JOINING sheet');
     }
 
     // Then, insert the leaving record
@@ -372,12 +405,12 @@ const handleSubmit = async (e) => {
                 <thead className="bg-gray-100 ">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKA-Joining ID</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Father Name</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Of Joining</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white  ">
@@ -395,7 +428,7 @@ const handleSubmit = async (e) => {
               <td colSpan="7" className="px-6 py-12 text-center">
                 <p className="text-red-500">Error: {error}</p>
                 <button 
-                  onClick={fetchEnquiryData}
+                  onClick={fetchJoiningData}
                   className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
                 >
                   Retry
@@ -419,7 +452,7 @@ const handleSubmit = async (e) => {
   {item.dateOfJoining ? formatDOB(item.dateOfJoining) : '-'}
 </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.designation}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.salary}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.department}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -437,11 +470,12 @@ const handleSubmit = async (e) => {
               <table className="min-w-full divide-y divide-white  ">
                 <thead className="bg-gray-100 ">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKA-Joining ID</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Of Joining</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Of Leaving</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason Of Leaving</th>
                   </tr>
                 </thead>
@@ -460,7 +494,7 @@ const handleSubmit = async (e) => {
               <td colSpan="7" className="px-6 py-12 text-center">
                 <p className="text-red-500">Error: {error}</p>
                 <button 
-                  onClick={fetchEnquiryData}
+                  onClick={fetchLeavingData}
                   className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
                 >
                   Retry
@@ -478,6 +512,7 @@ const handleSubmit = async (e) => {
                         {item.dateOfLeaving ?formatDOB(item.dateOfLeaving) : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.designation}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.department}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.reasonOfLeaving}</td>
                     </tr>
                   ))}
@@ -505,7 +540,7 @@ const handleSubmit = async (e) => {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">SKA-Joining ID</label>
                 <input
                   type="text"
                   value={selectedItem.employeeNo}

@@ -55,23 +55,23 @@ const MyProfile = () => {
 
       const processedData = dataRows.map(row => ({
         timestamp: row[getIndex('Timestamp')] || '',
-        joiningNo: row[getIndex('Employee ID')] || '',
+        joiningNo: row[getIndex('SKA-Joining ID')] || '',
         candidateName: row[getIndex('Name As Per Aadhar')] || '',
         candidatePhoto: row[getIndex("Candidate's Photo")] || '',
         fatherName: row[getIndex('Father Name')] || '',
         dateOfJoining: row[getIndex('Date Of Joining')] || '',
         joiningPlace: row[getIndex('Joining Place')] || '',
         designation: row[getIndex('Designation')] || '',
-        salary: row[getIndex('Salary')] || '',
+        salary: row[getIndex('Department')] || '',
         currentAddress: row[getIndex('Current Address')] || '',
         addressAsPerAadhar: row[getIndex('Address As Per Aadhar Card')] || '',
         bodAsPerAadhar: row[getIndex('Date Of Birth As Per Aadhar Card')] || '',
         gender: row[getIndex('Gender')] || '',
         mobileNo: row[getIndex('Mobile No.')] || '',
-        familyMobileNo: row[getIndex('Family Mobile No.')] || '',
+        familyMobileNo: row[getIndex('Family Mobile No')] || '',
         relationWithFamily: row[getIndex('Relationship With Family Person')] || '',
         email: row[getIndex('Personal Email-Id')] || '', 
-        companyName: row[getIndex('Joining Company Name')] || '',
+        companyName: row[getIndex('Department')] || '',
         aadharNo: row[getIndex('Aadhar Card No')] || '',
       }));
 
@@ -299,21 +299,27 @@ const MyProfile = () => {
           <div className="text-center">
             <div className="w-32 h-32 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
               {profileData.candidatePhoto ? (
-                <img 
-                  src={profileData.candidatePhoto} 
-                  alt="Profile" 
+                <img
+                  src={profileData.candidatePhoto}
+                  alt="Profile"
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.nextSibling.style.display = 'flex';
+                    e.target.style.display = "none";
+                    e.target.nextSibling.style.display = "flex";
                   }}
                 />
               ) : null}
-              <div className={`w-full h-full flex items-center justify-center ${profileData.candidatePhoto ? 'hidden' : 'flex'}`}>
+              <div
+                className={`w-full h-full flex items-center justify-center ${
+                  profileData.candidatePhoto ? "hidden" : "flex"
+                }`}
+              >
                 <User size={48} className="text-indigo-400" />
               </div>
             </div>
-            <h2 className="text-xl font-bold text-gray-800">{profileData.candidateName}</h2>
+            <h2 className="text-xl font-bold text-gray-800">
+              {profileData.candidateName}
+            </h2>
             <p className="text-gray-600">{profileData.designation}</p>
             <p className="text-sm text-gray-500">{profileData.joiningNo}</p>
           </div>
@@ -321,117 +327,135 @@ const MyProfile = () => {
 
         {/* Personal Information */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border p-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-6">Personal Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Mail size={16} className="inline mr-2" />
-                Email Address
-              </label>
-              {isEditing ? (
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email || ''}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              ) : (
-                <p className="text-gray-800">{profileData.email}</p>
-              )}
-            </div>
+  <h3 className="text-lg font-bold text-gray-800 mb-6">Personal Information</h3>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    {/* First Column */}
+    <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          <User size={16} className="inline mr-2" />
+          Full Name
+        </label>
+        <p className="text-gray-800 font-medium">{profileData.candidateName}</p>
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Building size={16} className="inline mr-2" />
+          Designation
+        </label>
+        <p className="text-gray-800">{profileData.designation}</p>
+      </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Phone size={16} className="inline mr-2" />
-                Phone Number
-              </label>
-              {isEditing ? (
-                <input
-                  type="tel"
-                  name="mobileNo"
-                  value={formData.mobileNo || ''}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              ) : (
-                <p className="text-gray-800">{profileData.mobileNo}</p>
-              )}
-            </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Building size={16} className="inline mr-2" />
+          Department
+        </label>
+        <p className="text-gray-800">{profileData.companyName}</p>
+      </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Building size={16} className="inline mr-2" />
-                Company
-              </label>
-              <p className="text-gray-800">{profileData.companyName}</p>
-            </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Calendar size={16} className="inline mr-2" />
+          Date of Birth
+        </label>
+        <p className="text-gray-800">{profileData.bodAsPerAadhar}</p>
+      </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar size={16} className="inline mr-2" />
-                Joining Date
-              </label>
-              <p className="text-gray-800">{profileData.dateOfJoining}</p>
-            </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+        <p className="text-gray-800">{profileData.gender}</p>
+      </div>
+    </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Father's Name</label>
-              <p className="text-gray-800">{profileData.fatherName}</p>
-            </div>
+    {/* Second Column */}
+    <div className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Father's Name</label>
+        <p className="text-gray-800">{profileData.fatherName}</p>
+      </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
-              <p className="text-gray-800">{profileData.gender}</p>
-            </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Calendar size={16} className="inline mr-2" />
+          Joining Date
+        </label>
+        <p className="text-gray-800">{profileData.dateOfJoining}</p>
+      </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
-              <p className="text-gray-800">{profileData.bodAsPerAadhar}</p>
-            </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Mail size={16} className="inline mr-2" />
+          Email Address
+        </label>
+        {isEditing ? (
+          <input
+            type="email"
+            name="email"
+            value={formData.email || ''}
+            onChange={handleInputChange}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        ) : (
+          <p className="text-gray-800">{profileData.email}</p>
+        )}
+      </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact</label>
-              {isEditing ? (
-                <input
-                  type="tel"
-                  name="familyMobileNo"
-                  value={formData.familyMobileNo || ''}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              ) : (
-                <p className="text-gray-800">{profileData.familyMobileNo}</p>
-              )}
-            </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          <Phone size={16} className="inline mr-2" />
+          Phone Number
+        </label>
+        {isEditing ? (
+          <input
+            type="tel"
+            name="mobileNo"
+            value={formData.mobileNo || ''}
+            onChange={handleInputChange}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        ) : (
+          <p className="text-gray-800">{profileData.mobileNo}</p>
+        )}
+      </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <MapPin size={16} className="inline mr-2" />
-                Current Address
-              </label>
-              {isEditing ? (
-                <textarea
-                  name="currentAddress"
-                  value={formData.currentAddress || ''}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              ) : (
-                <p className="text-gray-800 whitespace-pre-line">{profileData.currentAddress}</p>
-              )}
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <MapPin size={16} className="inline mr-2" />
-                Aadhar Address
-              </label>
-              <p className="text-gray-800 whitespace-pre-line">{profileData.addressAsPerAadhar}</p>
-            </div>
-          </div>
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact</label>
+        {isEditing ? (
+          <input
+            type="tel"
+            name="familyMobileNo"
+            value={formData.familyMobileNo || ''}
+            onChange={handleInputChange}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        ) : (
+          <p className="text-gray-800">{profileData.familyMobileNo}</p>
+        )}
+      </div>
+    </div>
+  </div>
+  
+  {/* Current Address - Full width below the two columns */}
+  <div className="mt-6 pt-6 border-t border-gray-200">
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      <MapPin size={16} className="inline mr-2" />
+      Current Address
+    </label>
+    {isEditing ? (
+      <textarea
+        name="currentAddress"
+        value={formData.currentAddress || ''}
+        onChange={handleInputChange}
+        rows={3}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+    ) : (
+      <p className="text-gray-800 whitespace-pre-line">{profileData.currentAddress}</p>
+    )}
+  </div>
+</div>
       </div>
     </div>
   );

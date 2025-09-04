@@ -16,10 +16,11 @@ const LeaveRequest = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [employees, setEmployees] = useState([]);
+  const [hodNames, setHodNames] = useState([]);
   const [formData, setFormData] = useState({
     employeeId: employeeId,
     employeeName: user.Name || '',
-    designation: user.Designation || '',
+    designation: '',
     hodName: '',
     leaveType: '',
     fromDate: '',
@@ -27,55 +28,84 @@ const LeaveRequest = () => {
     reason: ''
   });
 
-const fetchEmployeeData = async () => {
-  try {
-    const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch'
-    );
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch employee data');
-    }
-    
-    const rawData = result.data || result;
-    
-    if (!Array.isArray(rawData)) {
-      throw new Error('Expected array data not received');
-    }
-
-    // Find the employee data based on employee name (Column E, index 4)
-    const employeeRow = rawData.find(row => 
-      row[4]?.toString().trim().toLowerCase() === user.Name?.toString().trim().toLowerCase()
-    );
-    
-    if (employeeRow) {
-      // Column B (index 1) contains Employee ID
-      const employeeId = employeeRow[1] || '';
-      // Column I (index 8) contains designation
-      const designation = employeeRow[8] || '';
+  // Fetch HOD names from Master sheet
+  const fetchHodNames = async () => {
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Master&action=fetch'
+      );
       
-      setFormData(prev => ({
-        ...prev,
-        employeeId: employeeId,
-        designation: designation
-      }));
-    }
-  } catch (error) {
-    console.error('Error fetching employee data:', error);
-  }
-};
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch HOD data');
+      }
+      
+      const rawData = result.data || result;
+      
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
 
-// Call this function in useEffect
-useEffect(() => {
-  fetchLeaveData();
-  fetchEmployeeData(); // Add this line
-}, []);
+      // Skip the first row (header) and get HOD names from Column A (index 0)
+      const hodData = rawData.slice(1).map(row => row[0] || '').filter(name => name);
+      
+      setHodNames(hodData);
+    } catch (error) {
+      console.error('Error fetching HOD data:', error);
+      toast.error(`Failed to load HOD data: ${error.message}`);
+    }
+  };
+
+  // Fetch employee data including designation
+  const fetchEmployeeData = async () => {
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch'
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch employee data');
+      }
+      
+      const rawData = result.data || result;
+      
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
+
+      // Data starts from row 7 (index 6)
+      // Column C (index 2) contains Employee Name
+      // Column B (index 1) contains Employee ID
+      // Column F (index 5) contains Designation
+      const employeeRow = rawData.slice(6).find(row => 
+        row[2]?.toString().trim().toLowerCase() === user.Name?.toString().trim().toLowerCase()
+      );
+      
+      if (employeeRow) {
+        const employeeId = employeeRow[1] || '';
+        const designation = employeeRow[5] || '';
+        
+        setFormData(prev => ({
+          ...prev,
+          employeeId: employeeId,
+          designation: designation
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching employee data:', error);
+    }
+  };
 
   // Fetch employees from JOINING sheet
   const fetchEmployees = async () => {
@@ -100,11 +130,14 @@ useEffect(() => {
         throw new Error('Expected array data not received');
       }
 
-      // Data starts from row 7 (index 6), Column E is index 4, Column B is index 1, Column I is index 8
+      // Data starts from row 7 (index 6)
+      // Column C is index 2 (Employee Name)
+      // Column B is index 1 (Employee ID)
+      // Column F is index 5 (Designation)
       const employeeData = rawData.slice(6).map((row, index) => ({
         id: row[1] || '', // Column B (Employee ID)
-        name: row[4] || '', // Column E (Employee Name)
-        designation: row[8] || '', // Column I (Designation)
+        name: row[2] || '', // Column C (Employee Name)
+        designation: row[5] || '', // Column F (Designation)
         rowIndex: index + 7 // Actual row number in sheet
       })).filter(emp => emp.name && emp.id); // Filter out empty entries
 
@@ -192,70 +225,72 @@ useEffect(() => {
     return date.getMonth() === parseInt(monthIndex);
   };
 
-const fetchLeaveData = async () => {
-  setLoading(true);
-  setTableLoading(true);
-  setError(null);
+  const fetchLeaveData = async () => {
+    setLoading(true);
+    setTableLoading(true);
+    setError(null);
 
-  try {
-    const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Leave Management&action=fetch'
-    );
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch leave data');
-    }
-    
-    const rawData = result.data || result;
-    console.log("Raw data from API:", rawData);
-    
-    if (!Array.isArray(rawData)) {
-      throw new Error('Expected array data not received');
-    }
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Leave Management&action=fetch'
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch leave data');
+      }
+      
+      const rawData = result.data || result;
+      console.log("Raw data from API:", rawData);
+      
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
 
-    const dataRows = rawData.length > 1 ? rawData.slice(1) : [];
-    
-    // Process and filter data by employee name
-    const processedData = dataRows
-      .map((row, index) => ({
-        id: index + 1,
-        timestamp: row[0] || '',
-        serialNo: row[1] || '',
-        employeeId: row[2] || '',
-        employeeName: row[3] || '',
-        startDate: row[4] || '',
-        endDate: row[5] || '',
-        reason: row[6] || '',
-        days: calculateDays(row[4], row[5]),
-        status: row[7] || 'Pending',
-        leaveType: row[8] || '', // Column I (index 8) - Leave Type
-        appliedDate: row[0] || '', // Using timestamp as applied date
-        approvedBy: row[9] || '', // Adjust index if needed
-      }))
-      .filter(item => item.employeeName === user.Name);
-    
-    console.log("Filtered leave data:", processedData);
-    setLeavesData(processedData);
-   
-  } catch (error) {
-    console.error('Error fetching leave data:', error);
-    setError(error.message);
-    toast.error(`Failed to load leave data: ${error.message}`);
-  } finally {
-    setLoading(false);
-    setTableLoading(false);
-  }
-};
+      const dataRows = rawData.length > 1 ? rawData.slice(1) : [];
+      
+      // Process and filter data by employee name
+      const processedData = dataRows
+        .map((row, index) => ({
+          id: index + 1,
+          timestamp: row[0] || '',
+          serialNo: row[1] || '',
+          employeeId: row[2] || '',
+          employeeName: row[3] || '',
+          startDate: row[4] || '',
+          endDate: row[5] || '',
+          reason: row[6] || '',
+          days: calculateDays(row[4], row[5]),
+          status: row[7] || 'Pending',
+          leaveType: row[8] || '', // Column I (index 8) - Leave Type
+          appliedDate: row[0] || '', // Using timestamp as applied date
+          approvedBy: row[9] || '', // Adjust index if needed
+        }))
+        .filter(item => item.employeeName === user.Name);
+      
+      console.log("Filtered leave data:", processedData);
+      setLeavesData(processedData);
+     
+    } catch (error) {
+      console.error('Error fetching leave data:', error);
+      setError(error.message);
+      toast.error(`Failed to load leave data: ${error.message}`);
+    } finally {
+      setLoading(false);
+      setTableLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchLeaveData();
     fetchEmployees();
+    fetchEmployeeData();
+    fetchHodNames();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -301,7 +336,7 @@ const fetchLeaveData = async () => {
         setFormData({
           employeeId: employeeId,
           employeeName: user.Name || '',
-          designation: user.Designation || '',
+          designation: formData.designation || '',
           hodName: '',
           leaveType: '',
           fromDate: '',
@@ -328,29 +363,27 @@ const fetchLeaveData = async () => {
     'Normal Leave',
   ];
 
-const calculateLeaveCounts = () => {
-  // Filter for approved leaves for this specific employee
-  const approvedLeaves = leavesData.filter(leave => 
-    leave.status && leave.status.toLowerCase() === 'approved' && 
-    leave.employeeName === user.Name &&
-    (selectedMonth === 'all' || 
-     isDateInMonth(leave.startDate, selectedMonth) || 
-     isDateInMonth(leave.endDate, selectedMonth))
-  );
-  return {
-    'Casual Leave': approvedLeaves
-      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'casual leave')
-      .reduce((sum, leave) => sum + (leave.days || 0), 0),
-    'Earned Leave': approvedLeaves
-      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'earned leave')
-      .reduce((sum, leave) => sum + (leave.days || 0), 0),
-    'Normal Leave': approvedLeaves
-      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'normal leave')
-      .reduce((sum, leave) => sum + (leave.days || 0), 0),
+  const calculateLeaveCounts = () => {
+    // Filter for approved leaves for this specific employee
+    const approvedLeaves = leavesData.filter(leave => 
+      leave.status && leave.status.toLowerCase() === 'approved' && 
+      leave.employeeName === user.Name &&
+      (selectedMonth === 'all' || 
+       isDateInMonth(leave.startDate, selectedMonth) || 
+       isDateInMonth(leave.endDate, selectedMonth))
+    );
+    return {
+      'Casual Leave': approvedLeaves
+        .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'casual leave')
+        .reduce((sum, leave) => sum + (leave.days || 0), 0),
+      'Earned Leave': approvedLeaves
+        .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'earned leave')
+        .reduce((sum, leave) => sum + (leave.days || 0), 0),
+      'Normal Leave': approvedLeaves
+        .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'normal leave')
+        .reduce((sum, leave) => sum + (leave.days || 0), 0),
+    };
   };
-};
-
-
 
   // Calculate leave balance based on approved leaves for the specific employee
   const calculateLeaveBalance = () => {
@@ -376,33 +409,32 @@ const calculateLeaveCounts = () => {
     };
   };
 
-// ✅ Approved leave counts (only number of requests)
-const calculateApprovedLeaveCounts = () => {
-  const approvedLeaves = leavesData.filter(
-    leave =>
-      leave.status &&
-      leave.status.toLowerCase() === 'approved' &&
-      leave.employeeName === user.Name &&
-      (selectedMonth === 'all' ||
-        isDateInMonth(leave.startDate, selectedMonth) ||
-        isDateInMonth(leave.endDate, selectedMonth))
-  );
+  // ✅ Approved leave counts (only number of requests)
+  const calculateApprovedLeaveCounts = () => {
+    const approvedLeaves = leavesData.filter(
+      leave =>
+        leave.status &&
+        leave.status.toLowerCase() === 'approved' &&
+        leave.employeeName === user.Name &&
+        (selectedMonth === 'all' ||
+          isDateInMonth(leave.startDate, selectedMonth) ||
+          isDateInMonth(leave.endDate, selectedMonth))
+    );
 
-  return {
-    'Casual Leave': approvedLeaves.filter(
-      leave => leave.leaveType && leave.leaveType.toLowerCase() === 'casual leave'
-    ).length,
-    'Earned Leave': approvedLeaves.filter(
-      leave => leave.leaveType && leave.leaveType.toLowerCase() === 'earned leave'
-    ).length,
-    'Normal Leave': approvedLeaves.filter(
-      leave => leave.leaveType && leave.leaveType.toLowerCase() === 'normal leave'
-    ).length,
+    return {
+      'Casual Leave': approvedLeaves.filter(
+        leave => leave.leaveType && leave.leaveType.toLowerCase() === 'casual leave'
+      ).length,
+      'Earned Leave': approvedLeaves.filter(
+        leave => leave.leaveType && leave.leaveType.toLowerCase() === 'earned leave'
+      ).length,
+      'Normal Leave': approvedLeaves.filter(
+        leave => leave.leaveType && leave.leaveType.toLowerCase() === 'normal leave'
+      ).length,
+    };
   };
-};
 
-const approvedCounts = calculateApprovedLeaveCounts();
-
+  const approvedCounts = calculateApprovedLeaveCounts();
 
   // Generate month options for the dropdown
   const monthOptions = [
@@ -457,25 +489,24 @@ const approvedCounts = calculateApprovedLeaveCounts();
       </div>
 
       {/* Leave Balance Cards */}
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-  {Object.entries(approvedCounts).map(([leaveType, count]) => (
-    <div key={leaveType} className="bg-white rounded-xl shadow-lg border p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-600 font-medium">{leaveType}</p>
-          <h3 className="text-2xl font-bold text-gray-800">{count}</h3>
-          <p className="text-xs text-gray-500">
-            Approved requests count
-          </p>
-        </div>
-        <div className="p-3 rounded-full bg-indigo-100">
-          <Calendar size={24} className="text-indigo-600" />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Object.entries(approvedCounts).map(([leaveType, count]) => (
+          <div key={leaveType} className="bg-white rounded-xl shadow-lg border p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 font-medium">{leaveType}</p>
+                <h3 className="text-2xl font-bold text-gray-800">{count}</h3>
+                <p className="text-xs text-gray-500">
+                  Approved requests count
+                </p>
+              </div>
+              <div className="p-3 rounded-full bg-indigo-100">
+                <Calendar size={24} className="text-indigo-600" />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
-    </div>
-  ))}
-</div>
-
 
       {/* Leave Requests Table */}
       <div className="bg-white rounded-lg shadow border overflow-hidden">
@@ -579,15 +610,15 @@ const approvedCounts = calculateApprovedLeaveCounts();
               </div>
 
               <div>
-  <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
-  <input
-    type="text"
-    name="designation"
-    value={formData.designation}
-    className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
-    readOnly
-  />
-</div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                <input
+                  type="text"
+                  name="designation"
+                  value={formData.designation}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
+                  readOnly
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name *</label>
@@ -599,11 +630,9 @@ const approvedCounts = calculateApprovedLeaveCounts();
                   required
                 >
                   <option value="">Select HOD</option>
-                  <option value="Deepak">Deepak</option>
-                  <option value="Vikas">Vikas</option>
-                  <option value="Dharam">Dharam</option>
-                  <option value="Pratap">Pratap</option>
-                  <option value="Aubhav">Aubhav</option>
+                  {hodNames.map((name, index) => (
+                    <option key={index} value={name}>{name}</option>
+                  ))}
                 </select>
               </div>
 

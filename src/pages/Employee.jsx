@@ -72,17 +72,17 @@ const Employee = () => {
       };
 
       const processedData = dataRows.map(row => ({
-        employeeId: row[getIndex('Employee ID')] || '',
-        candidateName: row[getIndex('Name As Per Aadhar')] || '',
-        fatherName: row[getIndex('Father Name')] || '',
-        dateOfJoining: row[getIndex('Date Of Joining')] || '',
-        joiningPlace: row[getIndex('Joining Place')] || '',
-        designation: row[getIndex('Designation')] || '',
-        salary: row[getIndex('Salary')] || '',
-        mobileNo: row[getIndex('Mobile No.')] || '',
+        employeeId: row[1] || '', // Column B (index 1)
+        candidateName: row[2] || '', // Column C (index 2)
+        fatherName: row[3] || '', // Column D (index 3)
+        dateOfJoining: row[4] || '', // Column E (index 4)
+        dateOfBirth: row[9] || '', // Column J (index 9)
+        designation: row[5] || '', // Column F (index 5)
+        department: row[20] || '', // Column U (index 20)
+        mobileNo: row[11] || '', // Column L (index 11)
         // New fields for filtering
-        columnAQ: row[42] || '', // Column AQ (index 42)
-        columnAO: row[40] || '', // Column AO (index 40)
+        columnAQ: row[26] || '', // Column AQ (index 42)
+        columnAO: row[24] || '', // Column AO (index 40)
       }));
 
       // Filter logic: Column AQ has value AND Column AO is null/empty
@@ -247,27 +247,27 @@ const Employee = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Of Joining</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mobile Number</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Father Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Work Location</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date of Birth</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white ">
                   {tableLoading ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center">
+                    <td colSpan="8" className="px-6 py-12 text-center">
                       <div className="flex justify-center flex-col items-center">
                         <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
-                        <span className="text-gray-600 text-sm">Loading pending calls...</span>
+                        <span className="text-gray-600 text-sm">Loading employees...</span>
                       </div>
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center">
+                    <td colSpan="8" className="px-6 py-12 text-center">
                       <p className="text-red-500">Error: {error}</p>
                       <button 
-                        onClick={fetchLeavingData}
+                        onClick={fetchJoiningData}
                         className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
                       >
                         Retry
@@ -283,9 +283,11 @@ const Employee = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.mobileNo }</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.fatherName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.joiningPlace || '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.dateOfBirth ? formatDOB(item.dateOfBirth) : '-'}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.designation}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.salary}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.department}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -309,25 +311,25 @@ const Employee = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Of Leaving</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mobile Number</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Father Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Work Location</th>
+                    {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Work Location</th> */}
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salary</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason Of Leaving</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white ">
                   {tableLoading ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center">
+                    <td colSpan="10" className="px-6 py-12 text-center">
                       <div className="flex justify-center flex-col items-center">
                         <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
-                        <span className="text-gray-600 text-sm">Loading pending calls...</span>
+                        <span className="text-gray-600 text-sm">Loading leaving employees...</span>
                       </div>
                     </td>
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center">
+                    <td colSpan="10" className="px-6 py-12 text-center">
                       <p className="text-red-500">Error: {error}</p>
                       <button 
                         onClick={fetchLeavingData}
@@ -349,7 +351,7 @@ const Employee = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.mobileNo }</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.fatherName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.workingLocation || '-'}</td>
+                      {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.workingLocation || '-'}</td> */}
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.designation}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.salary}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.reasonOfLeaving}</td>

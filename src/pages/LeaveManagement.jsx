@@ -14,6 +14,7 @@ const LeaveManagement = () => {
   const [activeTab, setActiveTab] = useState('pending');
   const [actionInProgress, setActionInProgress] = useState(null);
   const [editableDates, setEditableDates] = useState({ from: '', to: '' });
+  const [hodNames, setHodNames] = useState([]);
   
   // New state for leave request modal
   const [showModal, setShowModal] = useState(false);
@@ -29,6 +30,47 @@ const LeaveManagement = () => {
     toDate: '',
     reason: ''
   });
+
+    const fetchHodNames = async () => {
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Master&action=fetch'
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch HOD data');
+      }
+      
+      const rawData = result.data || result;
+      
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
+
+      // Extract HOD names from Column A (index 0), skip header row
+      const hodData = rawData.slice(1).map(row => row[0]?.toString().trim()).filter(name => name);
+      
+      setHodNames([...new Set(hodData)]); // Remove duplicates
+    } catch (error) {
+      console.error('Error fetching HOD data:', error);
+      toast.error(`Failed to load HOD data: ${error.message}`);
+      
+      // Fallback to default HOD names if fetch fails
+      setHodNames(['Deepak', 'Vikas', 'Dharam', 'Pratap', 'Aubhav']);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeaveData();
+    fetchEmployees();
+    fetchHodNames(); // Fetch HOD names on component mount
+  }, []);
 
   const handleCheckboxChange = (leaveId, rowData) => {
     if (selectedRow?.serialNo === leaveId) {
@@ -83,8 +125,8 @@ const fetchEmployees = async () => {
       // Data starts from row 7 (index 6), Column E is index 4, Column B is index 1, Column I is index 8
       const employeeData = rawData.slice(6).map((row, index) => ({
         id: row[1] || '', // Column B (Employee ID)
-        name: row[4] || '', // Column E (Employee Name)
-        designation: row[8] || '', // Column I (Designation)
+        name: row[2] || '', // Column E (Employee Name)
+        designation: row[5] || '', // Column I (Designation)
         rowIndex: index + 7 // Actual row number in sheet
       })).filter(emp => emp.name && emp.id); // Filter out empty entries
 
@@ -228,103 +270,104 @@ const fetchEmployees = async () => {
     }
   };
 
-  const handleLeaveAction = async (action) => {
-    if (!selectedRow) {
-      toast.error('Please select a leave request');
-      return;
-    }
+const handleLeaveAction = async (action) => {
+  if (!selectedRow) {
+    toast.error('Please select a leave request');
+    return;
+  }
 
-    setActionInProgress(action);
-    setLoading(true);
+  setActionInProgress(action);
+  setLoading(true);
+  
+  try {
+    const fullDataResponse = await fetch(
+      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Leave Management&action=fetch'
+    );
     
-    try {
-      const fullDataResponse = await fetch(
-        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Leave Management&action=fetch'
-      );
-      
-      if (!fullDataResponse.ok) {
-        throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
-      }
-
-      const fullDataResult = await fullDataResponse.json();
-      const allData = fullDataResult.data || fullDataResult;
-
-      const headerRowIndex = 0;
-      const headers = allData[headerRowIndex].map(h => h?.toString().trim().toLowerCase());
-
-      const timestampIndex = 0;
-      const employeeIdIndex = 2;
-      const startDateIndex = 4;
-      const endDateIndex = 5;
-      const statusIndex = 7;
-
-      const rowIndex = allData.findIndex((row, idx) => 
-        idx > headerRowIndex &&
-        row[employeeIdIndex]?.toString().trim() === selectedRow.employeeId?.toString().trim()
-      );
-      
-      if (rowIndex === -1) {
-        throw new Error(`Employee ${selectedRow.employeeId} not found`);
-      }
-
-      let currentRow = [...allData[rowIndex]];
-      
-      const today = new Date();
-      const day = String(today.getDate()).padStart(2, '0');
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const year = today.getFullYear();
-      const formattedDate = `${day}/${month}/${year}`;
-      
-      // Update dates if they were changed
-      if (editableDates.from && editableDates.from !== selectedRow.startDate) {
-        const [year, month, day] = editableDates.from.split('-');
-        currentRow[startDateIndex] = `${day}/${month}/${year}`;
-      }
-
-      if (editableDates.to && editableDates.to !== selectedRow.endDate) {
-        const [year, month, day] = editableDates.to.split('-');
-        currentRow[endDateIndex] = `${day}/${month}/${year}`;
-      }
-      
-      currentRow[timestampIndex] = formattedDate;
-      currentRow[statusIndex] = action === 'accept' ? 'approved' : 'rejected';
-
-      const payload = {
-        sheetName: "Leave Management",
-        action: "update",
-        rowIndex: rowIndex + 1,
-        rowData: JSON.stringify(currentRow)
-      };
-
-      const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams(payload).toString(),
-        }
-      );
-
-      const result = await response.json();
-      if (result.success) {
-        toast.success(`Leave ${action === 'accept' ? 'approved' : 'rejected'} for ${selectedRow.employeeName || 'employee'}`);
-        fetchLeaveData();
-        setSelectedRow(null);
-        setEditableDates({ from: '', to: '' });
-      } else {
-        throw new Error(result.error || "Update failed");
-      }
-
-    } catch (error) {
-      console.error('Update error:', error);
-      toast.error(`Failed to ${action} leave: ${error.message}`);
-    } finally {
-      setLoading(false);
-      setActionInProgress(null);
+    if (!fullDataResponse.ok) {
+      throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
     }
-  };
+
+    const fullDataResult = await fullDataResponse.json();
+    const allData = fullDataResult.data || fullDataResult;
+
+    const headerRowIndex = 0;
+    const headers = allData[headerRowIndex].map(h => h?.toString().trim().toLowerCase());
+
+    const timestampIndex = 0;
+    const employeeIdIndex = 2;
+    const startDateIndex = 4;
+    const endDateIndex = 5;
+    const statusIndex = 7;
+
+    const rowIndex = allData.findIndex((row, idx) => 
+      idx > headerRowIndex &&
+      row[employeeIdIndex]?.toString().trim() === selectedRow.employeeId?.toString().trim()
+    );
+    
+    if (rowIndex === -1) {
+      throw new Error(`Employee ${selectedRow.employeeId} not found`);
+    }
+
+    let currentRow = [...allData[rowIndex]];
+    
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+    
+    // Update dates if they were changed
+    if (editableDates.from && editableDates.from !== selectedRow.startDate) {
+      const [year, month, day] = editableDates.from.split('-');
+      currentRow[startDateIndex] = `${day}/${month}/${year}`;
+    }
+
+    if (editableDates.to && editableDates.to !== selectedRow.endDate) {
+      const [year, month, day] = editableDates.to.split('-');
+      currentRow[endDateIndex] = `${day}/${month}/${year}`;
+    }
+    
+    // Only update necessary columns - preserve Column B (serial number)
+    currentRow[timestampIndex] = formattedDate;
+    currentRow[statusIndex] = action === 'accept' ? 'approved' : 'rejected';
+
+    const payload = {
+      sheetName: "Leave Management",
+      action: "update",
+      rowIndex: rowIndex + 1,
+      rowData: JSON.stringify(currentRow)
+    };
+
+    const response = await fetch(
+      "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams(payload).toString(),
+      }
+    );
+
+    const result = await response.json();
+    if (result.success) {
+      toast.success(`Leave ${action === 'accept' ? 'approved' : 'rejected'} for ${selectedRow.employeeName || 'employee'}`);
+      fetchLeaveData();
+      setSelectedRow(null);
+      setEditableDates({ from: '', to: '' });
+    } else {
+      throw new Error(result.error || "Update failed");
+    }
+
+  } catch (error) {
+    console.error('Update error:', error);
+    toast.error(`Failed to ${action} leave: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setActionInProgress(null);
+  }
+};
 
   const fetchLeaveData = async () => {
     setLoading(true);
@@ -366,6 +409,7 @@ const fetchEmployees = async () => {
         days: calculateDays(row[4], row[5]),
         status: row[7],
         leaveType: row[8],
+        hodName : row[9] || '',
       }));
 
       // Case-insensitive filtering
@@ -438,6 +482,7 @@ const fetchEmployees = async () => {
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HOD Name</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
         </tr>
       </thead>
@@ -487,6 +532,7 @@ const fetchEmployees = async () => {
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.remark}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.leaveType}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.hodName}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 <div className="flex space-x-2">
                   <button
@@ -559,6 +605,7 @@ const fetchEmployees = async () => {
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HOD Name</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-white">
@@ -576,6 +623,7 @@ const fetchEmployees = async () => {
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.days}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.remark}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.leaveType}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.hodName}</td>
             </tr>
           ))
         ) : (
@@ -600,6 +648,7 @@ const fetchEmployees = async () => {
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Days</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">HOD Name</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-white">
@@ -617,6 +666,7 @@ const fetchEmployees = async () => {
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.days}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.remark}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.leaveType}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.hodName}</td>
             </tr>
           ))
         ) : (
@@ -785,22 +835,20 @@ const fetchEmployees = async () => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name *</label>
-          <select
-            name="hodName"
-            value={formData.hodName}
-            onChange={handleInputChange}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          >
-            <option value="">Select HOD</option>
-            <option value="Deepak">Deepak</option>
-            <option value="Vikas">Vikas</option>
-            <option value="Dharam">Dharam</option>
-            <option value="Pratap">Pratap</option>
-            <option value="Aubhav">Aubhav</option>
-          </select>
-        </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name *</label>
+            <select
+              name="hodName"
+              value={formData.hodName}
+              onChange={handleInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              required
+            >
+              <option value="">Select HOD</option>
+              {hodNames.map((name, index) => (
+                <option key={index} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type *</label>

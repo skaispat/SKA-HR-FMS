@@ -59,8 +59,6 @@ const MisReport = () => {
       const totalWorkDone = parseInt(row[columnMap['Total Work Done']]) || 0;
       const weekPending = row[columnMap['Week Pending']] || '';
       const allPendingTillDate = row[columnMap['All Pending Till Date']] || '';
-      const plannedWorkNotDone = row[columnMap['Planned % Work Not Done']] || '';
-      const plannedWorkNotDoneOnTime = row[columnMap['Planned % Work Not Done On Time']] || '';
       
       // Generate avatar based on name
       const avatar = name && name.trim() !== '' ? 
@@ -83,8 +81,6 @@ const MisReport = () => {
         totalWorkDone,
         weekPending,
         allPendingTillDate,
-        plannedWorkNotDone,
-        plannedWorkNotDoneOnTime,
         avatar
       };
     });
@@ -136,7 +132,7 @@ const MisReport = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 z-10 py-2">
           <h1 className="text-2xl font-bold text-gray-900">MIS Report</h1>
           <button 
             onClick={fetchData}
@@ -150,22 +146,20 @@ const MisReport = () => {
         </div>
         
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
             <table className="min-w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NAME</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATE START</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATE END</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TARGET</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ACTUAL WORK DONE</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WEEKLY WORK DONE %</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WEEKLY WORK DONE ON TIME %</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TOTAL WORK DONE</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WEEK PENDING</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ALL PENDING TILL DATE</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PLANNED % WORK NOT DONE</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PLANNED % WORK NOT DONE ON TIME</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">NAME</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">DATE START</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">DATE END</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">TARGET</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">ACTUAL WORK DONE</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">WEEKLY WORK DONE %</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">WEEKLY WORK DONE ON TIME %</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">TOTAL WORK DONE</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">WEEK PENDING</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 sticky top-0">ALL PENDING TILL DATE</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -204,12 +198,6 @@ const MisReport = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {person.allPendingTillDate}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {person.plannedWorkNotDone}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {person.plannedWorkNotDoneOnTime}
                       </td>
                     </tr>
                   ))

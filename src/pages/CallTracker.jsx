@@ -398,20 +398,41 @@ const postToSheet = async (rowData) => {
     }
   };
 
- const formatDOB = (dateString) => {
-    if (!dateString) return '';
-    
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return dateString; // Return as-is if not a valid date
+const formatDOB = (dateString) => {
+  if (!dateString) return '';
+  
+  // Handle different date formats that might come from the input
+  let date;
+  
+  // If it's already a Date object
+  if (dateString instanceof Date) {
+    date = dateString;
+  } 
+  // If it's in the format "1/11/2021" (mm/dd/yyyy or dd/mm/yyyy)
+  else if (typeof dateString === 'string' && dateString.includes('/')) {
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      if (parseInt(parts[0]) > 12) {
+        date = new Date(parts[2], parts[1] - 1, parts[0]);
+      } else {
+        date = new Date(parts[2], parts[0] - 1, parts[1]);
+      }
     }
-    
-    const day = date.getDate();
-    const month = date.getMonth();
-    const year = date.getFullYear().toString().slice(-2);
-    
-    return `${day}/${month}/${year}`;
-  };
+  } 
+  else {
+    date = new Date(dateString);
+  }
+  
+  if (isNaN(date.getTime())) {
+    return dateString;
+  }
+  
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return `${day}/${month}/${year}`;
+};
 
 const handleSubmit = async (e) => {
   e.preventDefault();
@@ -424,30 +445,28 @@ const handleSubmit = async (e) => {
   }
 
   try {
-    const now = new Date();
-    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-
-    const rowData = [
-      formattedTimestamp,
-      selectedItem.candidateEnquiryNo || '',
-      formData.status,
-      formData.candidateSays,
-      formatDOB(formData.nextDate) || '',
-    ];
-
-    // Always post to Follow-Up sheet first, regardless of status
-    await postToSheet(rowData);
-    toast.success('Update successful!');
-    
-    // If status is Joining, show the joining modal after successful submission
+    // For Joining status, just show the joining modal without submitting
     if (formData.status === 'Joining') {
       setShowModal(false);
       setShowJoiningModal(true);
     } else {
+      // For other statuses, submit to Follow-Up sheet as before
+      const now = new Date();
+      const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+
+      const rowData = [
+        formattedTimestamp,
+        selectedItem.candidateEnquiryNo || '',
+        formData.status,
+        formData.candidateSays,
+        formatDOB(formData.nextDate) || '',
+      ];
+
+      await postToSheet(rowData);
+      toast.success('Update successful!');
       setShowModal(false);
+      fetchEnquiryData();
     }
-    
-    fetchEnquiryData();
   } catch (error) {
     console.error('Submission failed:', error);
     toast.error(`Failed to update: ${error.message}`);
@@ -462,109 +481,107 @@ const handleSubmit = async (e) => {
   }
 };
 
- const handleJoiningSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
+const handleJoiningSubmit = async (e) => {
+  e.preventDefault();
+  setSubmitting(true);
+  
+  try {
+    // First, submit the call tracker data to Follow-Up sheet
+    const now = new Date();
+    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+
+    const followUpRowData = [
+      formattedTimestamp,
+      selectedItem.candidateEnquiryNo || '',
+      formData.status, // This should be "Joining"
+      formData.candidateSays,
+      formatDOB(formData.nextDate) || '',
+    ];
+
+    await postToSheet(followUpRowData);
     
-    try {
-      // Upload files and get URLs
-      const uploadPromises = {};
-      const fileFields = [
-        'aadharFrontPhoto',
-        'aadharBackPhoto',
-        'bankPassbookPhoto',
-        'qualificationPhoto',
-        'salarySlip',
-        'resumeCopy'
-      ];
+    // Then proceed with the joining form submission
+    // Upload files and get URLs
+    const uploadPromises = {};
+    const fileFields = [
+      'aadharFrontPhoto',
+      'bankPassbookPhoto',
+      'resumeCopy'
+    ];
 
-      for (const field of fileFields) {
-        if (joiningFormData[field]) {
-          uploadPromises[field] = uploadFileToDrive(joiningFormData[field]);
-        } else {
-          uploadPromises[field] = Promise.resolve('');
-        }
+    for (const field of fileFields) {
+      if (joiningFormData[field]) {
+        uploadPromises[field] = uploadFileToDrive(joiningFormData[field]);
+      } else {
+        uploadPromises[field] = Promise.resolve('');
       }
-
-      // Wait for all uploads to complete
-      const uploadedUrls = await Promise.all(
-        Object.values(uploadPromises).map(promise => 
-          promise.catch(error => {
-            console.error('Upload failed:', error);
-            return ''; // Return empty string if upload fails
-          })
-        )
-      );
-
-      // Map uploaded URLs to their respective fields
-      const fileUrls = {};
-      Object.keys(uploadPromises).forEach((field, index) => {
-        fileUrls[field] = uploadedUrls[index];
-      });
-
-      const now = new Date();
-      const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
-
-      // Create an array with all column values in order
-      const rowData = [];
-      
-      // Assign values directly to array indices
-      rowData[0] = formattedTimestamp;           // Timestamp
-      // rowData[1] = "employee no";                // Employee No (placeholder)
-      rowData[2] = selectedItem.indentNo;        // Indent No
-      rowData[3] = selectedItem.candidateEnquiryNo || ''; // Candidate Enquiry No
-      rowData[4] = selectedItem.candidateName;   // Candidate Name
-      rowData[5] = joiningFormData.fatherName;   // Father Name
-      rowData[6] = formatDOB(joiningFormData.dateOfJoining); // Date of Joining
-      rowData[7] = joiningFormData.joiningPlace;  // Joining Place
-      rowData[8] = joiningFormData.designation;   // Designation
-      rowData[9] = joiningFormData.salary;        // Salary
-      rowData[10] = fileUrls.aadharFrontPhoto;    // Aadhar Front Photo (Column K)
-      rowData[11] = fileUrls.aadharBackPhoto;     // PAN Card Photo (Column L)
-      rowData[12] = "";                           // Candidate Photo (placeholder)
-      rowData[13] = selectedItem.presentAddress;  // Present Address
-      rowData[14] = joiningFormData.addressAsPerAadhar; // Address as per Aadhar
-      rowData[15] = formatDOB(joiningFormData.dobAsPerAadhar); // DOB as per Aadhar
-      rowData[16] = joiningFormData.gender;       // Gender
-      rowData[17] = selectedItem.candidatePhone;  // Candidate Phone
-      rowData[18] = joiningFormData.familyMobileNo; // Family Mobile No
-      rowData[19] = joiningFormData.relationshipWithFamily; // Relationship with Family
-      rowData[20] = joiningFormData.pastPfId;     // Past PF ID
-      rowData[21] = joiningFormData.currentBankAc; // Current Bank Account
-      rowData[22] = joiningFormData.ifscCode;     // IFSC Code
-      rowData[23] = joiningFormData.branchName;   // Branch Name
-      rowData[24] = fileUrls.bankPassbookPhoto;   // Bank Passbook Photo (Column Y)
-      rowData[25] = selectedItem.candidateEmail;  // Candidate Email
-      rowData[26] = joiningFormData.esicNo;       // ESIC No
-      rowData[27] = joiningFormData.highestQualification; // Highest Qualification
-      rowData[28] = joiningFormData.pfEligible;   // PF Eligible
-      rowData[29] = joiningFormData.esicEligible; // ESIC Eligible
-      rowData[30] = joiningFormData.joiningCompanyName; // Joining Company Name
-      rowData[31] = joiningFormData.emailToBeIssue; // Email to be Issued
-      rowData[32] = joiningFormData.issueMobile;   // Issue Mobile
-      rowData[33] = joiningFormData.issueLaptop;   // Issue Laptop
-      rowData[34] = selectedItem.aadharNo;        // Aadhar No
-      rowData[35] = joiningFormData.modeOfAttendance; // Mode of Attendance
-      rowData[36] = fileUrls.qualificationPhoto;  // Qualification Photo (Column AK)
-      rowData[37] = joiningFormData.paymentMode;   // Payment Mode
-      rowData[38] = fileUrls.salarySlip;          // Salary Slip (Column AM)
-      rowData[39] = fileUrls.resumeCopy;          // Resume Copy (Column AN)
-
-      await postToJoiningSheet(rowData);
-
-      console.log("Joining Form Data:", rowData);
-
-      toast.success('Employee added successfully!');
-      setShowJoiningModal(false);
-      setSelectedItem(null);
-      fetchEnquiryData();
-    } catch (error) {
-      console.error('Error submitting joining form:', error);
-      toast.error(`Failed to submit joining form: ${error.message}`);
-    } finally {
-      setSubmitting(false);
     }
-  };
+
+    // Wait for all uploads to complete
+    const uploadedUrls = await Promise.all(
+      Object.values(uploadPromises).map(promise => 
+        promise.catch(error => {
+          console.error('Upload failed:', error);
+          return ''; // Return empty string if upload fails
+        })
+      )
+    );
+
+    // Map uploaded URLs to their respective fields
+    const fileUrls = {};
+    Object.keys(uploadPromises).forEach((field, index) => {
+      fileUrls[field] = uploadedUrls[index];
+    });
+
+    const plannedDate = `${now.getDate()}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+    // Create an array with all column values in order
+    const rowData = [];
+    
+    // Assign values directly to array indices according to specified columns
+    rowData[0] = formattedTimestamp;           // Column A: Timestamp
+    rowData[1] = "";                           // Column B: (empty)
+    rowData[2] = selectedItem.candidateName;   // Column C: Name As Per Aadhar
+    rowData[3] = joiningFormData.fatherName;   // Column D: Father Name
+    rowData[4] = formatDOB(joiningFormData.dateOfJoining); // Column E: Date Of Joining
+    rowData[5] = joiningFormData.designation;  // Column F: Designation
+    rowData[6] = fileUrls.aadharFrontPhoto;    // Column G: Aadhar card
+    rowData[7] = "";                           // Column H: (empty)
+    rowData[8] = selectedItem.presentAddress;  // Column I: Current Address
+    rowData[9] = formatDOB(joiningFormData.dobAsPerAadhar); // Column J: Date Of Birth
+    rowData[10] = joiningFormData.gender;      // Column K: Gender
+    rowData[11] = selectedItem.candidatePhone; // Column L: Mobile No.
+    rowData[12] = joiningFormData.familyMobileNo; // Column M: Family Mobile Number
+    rowData[13] = joiningFormData.relationshipWithFamily; // Column N: Relationship With Family
+    rowData[14] = joiningFormData.currentBankAc; // Column O: Current Account No
+    rowData[15] = joiningFormData.ifscCode;    // Column P: IFSC Code
+    rowData[16] = joiningFormData.branchName;  // Column Q: Branch Name
+    rowData[17] = fileUrls.bankPassbookPhoto;  // Column R: Photo Of Front Bank Passbook
+    rowData[18] = selectedItem.candidateEmail; // Column S: Candidate Email
+    rowData[19] = joiningFormData.highestQualification; // Column T: Highest Qualification
+    rowData[20] = joiningFormData.department;  // Column U: Department
+    rowData[21] = joiningFormData.equipment;   // Column V: Equipment
+    rowData[22] = selectedItem.aadharNo;       // Column W: Aadhar Number
+    rowData[23] = fileUrls.resumeCopy;         // Column X: Upload Resume
+    rowData[24] = "";                          // Column Y: (empty)
+    rowData[25] = "";                          // Column Z: (empty)
+    rowData[26] = plannedDate;                 // Column AA: Planned Date (timestamp)
+
+    await postToJoiningSheet(rowData);
+
+    console.log("Joining Form Data:", rowData);
+
+    toast.success('Employee added successfully!');
+    setShowJoiningModal(false);
+    setSelectedItem(null);
+    fetchEnquiryData();
+  } catch (error) {
+    console.error('Error submitting joining form:', error);
+    toast.error(`Failed to submit joining form: ${error.message}`);
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const filteredPendingData = pendingData.filter(item => {
     const matchesSearch = item.candidateName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -903,542 +920,321 @@ const handleSubmit = async (e) => {
 
       {/* Joining Modal */}
       {showJoiningModal && selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-gray-300">
-              <h3 className="text-lg font-medium text-gray-900">Employee Joining Form</h3>
-              <button onClick={() => setShowJoiningModal(false)} className="text-gray-500 hover:text-gray-700">
-                <X size={20} />
-              </button>
-            </div>
-       <form onSubmit={handleJoiningSubmit} className="p-6 space-y-6">
-  {/* Section 1: Basic Information */}
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
-      <input
-        type="text"
-        value={selectedItem.candidateEnquiryNo}
-        disabled
-        className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Indent No</label>
-      <input
-        type="text"
-        value={selectedItem.indentNo}
-        disabled
-        className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Name As Per Aadhar *</label>
-      <input
-        type="text"
-         disabled
-        value={selectedItem.candidateName}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-     
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Father Name</label>
-      <input
-        type="text"
-        name="fatherName"
-        value={joiningFormData.fatherName}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Date Of Birth *</label>
-      <input
-        type="date"
-     name="dobAsPerAadhar"
-        value={joiningFormData.dobAsPerAadhar}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-        
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-      <select
-        name="gender"
-        value={joiningFormData.gender}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      >
-        <option value="">Select Gender</option>
-        <option value="Male">Male</option>
-        <option value="Female">Female</option>
-        <option value="Other">Other</option>
-      </select>
-    </div>
-  </div>
-
-  {/* Section 2: Contact Information */}
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Mobile No. *</label>
-      <input
-        type="tel"
-        disabled
-        value={selectedItem.candidatePhone}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-       
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Candidate Email *</label>
-      <input
-        type="email"
-         disabled
-        value={selectedItem.candidateEmail}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-        
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Family Mobile Number *</label>
-      <input
-        name="familyMobileNo"
-        value={joiningFormData.familyMobileNo}
-        onChange={handleJoiningInputChange}
-      
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Relationship With Family *</label>
-      <input
-        name="relationshipWithFamily"
-        value={joiningFormData.relationshipWithFamily}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-       
-      />
-    </div>
-  </div>
-
-  {/* Section 3: Address Information */}
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Current Address *</label>
-      <textarea
-         disabled
-        value={selectedItem.presentAddress}
-        onChange={handleJoiningInputChange}
-        rows={3}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-        
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Address as per Aadhar *</label>
-      <textarea
-        name="addressAsPerAadhar"
-        value={joiningFormData.addressAsPerAadhar}
-        onChange={handleJoiningInputChange}
-        rows={3}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-       
-      />
-    </div>
-  </div>
-
-  {/* Section 4: Employment Details */}
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Date Of Joining *</label>
-      <input
-        type="date"
-        name="dateOfJoining"
-        value={joiningFormData.dateOfJoining}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-       
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Joining Place</label>
-      <input
-        type="text"
-        name="joiningPlace"
-        value={joiningFormData.joiningPlace}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Designation *</label>
-      <input
-        type="text"
-        name="designation"
-        value={joiningFormData.designation}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Salary</label>
-      <input
-        type="number"
-        name="salary"
-        value={joiningFormData.salary}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Joining Company Name *</label>
-      <input
-        name="joiningCompanyName"
-        value={joiningFormData.joiningCompanyName}
-        onChange={handleJoiningInputChange}
-        
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Mode of Attendance *</label>
-      <input
-        name="modeOfAttendance"
-        value={joiningFormData.modeOfAttendance}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-     
-      />
-    </div>
-  </div>
-
-  {/* Section 5: Bank & Financial Details */}
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Aadhar Number *</label>
-      <input
-       
-     disabled
-        value={selectedItem.aadharNo}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Current Account No*</label>
-      <input
-        
-        name="currentBankAc"
-        value={joiningFormData.currentBankAc}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">IFSC Code*</label>
-      <input
-        
-        name="ifscCode"
-        value={joiningFormData.ifscCode}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Branch Name*</label>
-      <input
-       
-        name="branchName"
-        value={joiningFormData.branchName}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Payment Mode *</label>
-      <input
-        name="paymentMode"
-        value={joiningFormData.paymentMode}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-        
-      />
-    </div>
-  </div>
-
-  {/* Section 6: Company Provisions */}
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Email ID to be Issue</label>
-      <select
-        name="emailToBeIssue"
-        value={joiningFormData.emailToBeIssue}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      >
-        <option value="">Select</option>
-        <option value="Yes">Yes</option>
-        <option value="No">No</option>
-      </select>
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Issue</label>
-      <select
-        name="issueMobile"
-        value={joiningFormData.issueMobile}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      >
-        <option value="">Select</option>
-        <option value="Yes">Yes</option>
-        <option value="No">No</option>
-      </select>
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Laptop Issue</label>
-      <select
-        name="issueLaptop"
-        value={joiningFormData.issueLaptop}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      >
-        <option value="">Select</option>
-        <option value="Yes">Yes</option>
-        <option value="No">No</option>
-      </select>
-    </div>
-  </div>
-
-  {/* Section 7: PF/ESIC Details */}
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Past PF No(if any)</label>
-      <input
-        name="pastPfId"
-        value={joiningFormData.pastPfId}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">ESIC No (IF Any)</label>
-      <input
-        name="esicNo"
-        value={joiningFormData.esicNo}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">PF Eligible</label>
-      <select
-        name="pfEligible"
-        value={joiningFormData.pfEligible}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      >
-        <option value="">Select</option>
-        <option value="Yes">Yes</option>
-        <option value="No">No</option>
-      </select>
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">ESIC Eligible</label>
-      <select
-        name="esicEligible"
-        value={joiningFormData.esicEligible}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      >
-        <option value="">Select</option>
-        <option value="Yes">Yes</option>
-        <option value="No">No</option>
-      </select>
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Highest Qualification</label>
-      <input
-        name="highestQualification"
-        value={joiningFormData.highestQualification}
-        onChange={handleJoiningInputChange}
-        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-      />
-    </div>
-  </div>
-
-  {/* Section 8: Document Uploads */}
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Aadhar Card</label>
-      <div className="flex items-center space-x-2">
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => handleFileChange(e, 'aadharFrontPhoto')}
-          className="hidden"
-          id="aadhar-front-upload"
-        />
-        <label
-          htmlFor="aadhar-front-upload"
-          className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
-        >
-          <Upload size={16} className="mr-2" />
-          Upload Photo
-        </label>
-        {joiningFormData.aadharFrontPhoto && (
-          <span className="text-sm text-gray-700">{joiningFormData.aadharFrontPhoto.name}</span>
-        )}
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-lg shadow-lg w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+      <div className="flex justify-between items-center p-6 border-b border-gray-300">
+        <h3 className="text-lg font-medium text-gray-900">Employee Joining Form</h3>
+        <button onClick={() => setShowJoiningModal(false)} className="text-gray-500 hover:text-gray-700">
+          <X size={20} />
+        </button>
       </div>
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Pan Card</label>
-      <div className="flex items-center space-x-2">
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => handleFileChange(e, 'aadharBackPhoto')}
-          className="hidden"
-          id="aadhar-back-upload"
-        />
-        <label
-          htmlFor="aadhar-back-upload"
-          className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
-        >
-          <Upload size={16} className="mr-2" />
-          Upload Photo
-        </label>
-        {joiningFormData.aadharBackPhoto && (
-          <span className="text-sm text-gray-700">{joiningFormData.aadharBackPhoto.name}</span>
-        )}
-      </div>
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Photo Of Front Bank Passbook</label>
-      <div className="flex items-center space-x-2">
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => handleFileChange(e, 'bankPassbookPhoto')}
-          className="hidden"
-          id="bank-passbook-upload"
-        />
-        <label
-          htmlFor="bank-passbook-upload"
-          className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
-        >
-          <Upload size={16} className="mr-2" />
-          Upload Photo
-        </label>
-        {joiningFormData.bankPassbookPhoto && (
-          <span className="text-sm text-gray-700">{joiningFormData.bankPassbookPhoto.name}</span>
-        )}
-      </div>
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Qualification Photo</label>
-      <div className="flex items-center space-x-2">
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => handleFileChange(e, 'qualificationPhoto')}
-          className="hidden"
-          id="qualification-photo-upload"
-        />
-        <label
-          htmlFor="qualification-photo-upload"
-          className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
-        >
-          <Upload size={16} className="mr-2" />
-          Upload Photo
-        </label>
-        {joiningFormData.qualificationPhoto && (
-          <span className="text-sm text-gray-700">{joiningFormData.qualificationPhoto.name}</span>
-        )}
-      </div>
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Salary Slip</label>
-      <div className="flex items-center space-x-2">
-        <input
-          type="file"
-          accept="image/*,application/pdf"
-          onChange={(e) => handleFileChange(e, 'salarySlip')}
-          className="hidden"
-          id="salary-slip-upload"
-        />
-        <label
-          htmlFor="salary-slip-upload"
-          className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
-        >
-          <Upload size={16} className="mr-2" />
-          Upload Document
-        </label>
-        {joiningFormData.salarySlip && (
-          <span className="text-sm text-gray-700">{joiningFormData.salarySlip.name}</span>
-        )}
-      </div>
-    </div>
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Upload Resume</label>
-      <div className="flex items-center space-x-2">
-        <input
-          type="file"
-          accept="image/*,application/pdf"
-          onChange={(e) => handleFileChange(e, 'resumeCopy')}
-          className="hidden"
-          id="resume-upload"
-        />
-        <label
-          htmlFor="resume-upload"
-          className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
-        >
-          <Upload size={16} className="mr-2" />
-          Upload Resume
-        </label>
-        {joiningFormData.resumeCopy && (
-          <span className="text-sm text-gray-700">{joiningFormData.resumeCopy.name}</span>
-        )}
-      </div>
-    </div>
-  </div>
-
-  {/* Form Actions */}
-  <div className="flex justify-end space-x-2 pt-4">
-    <button
-      type="button"
-      onClick={() => setShowJoiningModal(false)}
-      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-    >
-      Cancel
-    </button>
-    <button
-      type="submit"
-      className={`px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-indigo-800 flex items-center justify-center min-h-[42px] ${
-        submitting ? 'opacity-90 cursor-not-allowed' : ''
-      }`}
-      disabled={submitting}
-    >
-      {submitting ? (
-        <>
-          <svg className="animate-spin h-4 w-4 text-white mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          Submitting...
-        </>
-      ) : 'Submit'}
-    </button>
-  </div>
-</form>
+      <form onSubmit={handleJoiningSubmit} className="p-6 space-y-6">
+        {/* Section 1: Basic Information */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name As Per Aadhar *</label>
+            <input
+              type="text"
+              disabled
+              value={selectedItem.candidateName}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Father Name</label>
+            <input
+              type="text"
+              name="fatherName"
+              value={joiningFormData.fatherName}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date Of Birth *</label>
+            <input
+              type="date"
+              name="dobAsPerAadhar"
+              value={joiningFormData.dobAsPerAadhar}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+            <select
+              name="gender"
+              value={joiningFormData.gender}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            >
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Department *</label>
+            <select
+              name="department"
+              value={joiningFormData.department}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+              required
+            >
+              <option value="">Select Department</option>
+              <option value="Dispatch">Dispatch</option>
+              <option value="Office">Office</option>
+              <option value="Sales">Sales</option>
+              <option value="Admin">Admin</option>
+              <option value="Sms">Sms</option>
+              <option value="Store">Store</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Equipment</label>
+            <input
+              type="text"
+              name="equipment"
+              value={joiningFormData.equipment}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
           </div>
         </div>
-      )}
+
+        {/* Section 2: Contact Information */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mobile No. *</label>
+            <input
+              type="tel"
+              disabled
+              value={selectedItem.candidatePhone}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Candidate Email *</label>
+            <input
+              type="email"
+              disabled
+              value={selectedItem.candidateEmail}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Family Mobile Number *</label>
+            <input
+              name="familyMobileNo"
+              value={joiningFormData.familyMobileNo}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Relationship With Family *</label>
+            <input
+              name="relationshipWithFamily"
+              value={joiningFormData.relationshipWithFamily}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+        </div>
+
+        {/* Section 3: Address Information */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Current Address *</label>
+            <textarea
+              disabled
+              value={selectedItem.presentAddress}
+              onChange={handleJoiningInputChange}
+              rows={3}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+        </div>
+
+        {/* Section 4: Employment Details */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date Of Joining *</label>
+            <input
+              type="date"
+              name="dateOfJoining"
+              value={joiningFormData.dateOfJoining}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Designation *</label>
+            <input
+              type="text"
+              name="designation"
+              value={joiningFormData.designation}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Highest Qualification</label>
+            <input
+              name="highestQualification"
+              value={joiningFormData.highestQualification}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+        </div>
+
+        {/* Section 5: Bank & Financial Details */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Aadhar Number *</label>
+            <input
+              disabled
+              value={selectedItem.aadharNo}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Current Account No*</label>
+            <input
+              name="currentBankAc"
+              value={joiningFormData.currentBankAc}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">IFSC Code*</label>
+            <input
+              name="ifscCode"
+              value={joiningFormData.ifscCode}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Branch Name*</label>
+            <input
+              name="branchName"
+              value={joiningFormData.branchName}
+              onChange={handleJoiningInputChange}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            />
+          </div>
+        </div>
+
+        {/* Section 6: Document Uploads */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Aadhar Card</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileChange(e, 'aadharFrontPhoto')}
+                className="hidden"
+                id="aadhar-front-upload"
+              />
+              <label
+                htmlFor="aadhar-front-upload"
+                className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
+              >
+                <Upload size={16} className="mr-2" />
+                Upload Photo
+              </label>
+              {joiningFormData.aadharFrontPhoto && (
+                <span className="text-sm text-gray-700">{joiningFormData.aadharFrontPhoto.name}</span>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Photo Of Front Bank Passbook</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileChange(e, 'bankPassbookPhoto')}
+                className="hidden"
+                id="bank-passbook-upload"
+              />
+              <label
+                htmlFor="bank-passbook-upload"
+                className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
+              >
+                <Upload size={16} className="mr-2" />
+                Upload Photo
+              </label>
+              {joiningFormData.bankPassbookPhoto && (
+                <span className="text-sm text-gray-700">{joiningFormData.bankPassbookPhoto.name}</span>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Upload Resume</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={(e) => handleFileChange(e, 'resumeCopy')}
+                className="hidden"
+                id="resume-upload"
+              />
+              <label
+                htmlFor="resume-upload"
+                className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
+              >
+                <Upload size={16} className="mr-2" />
+                Upload Resume
+              </label>
+              {joiningFormData.resumeCopy && (
+                <span className="text-sm text-gray-700">{joiningFormData.resumeCopy.name}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Form Actions */}
+        <div className="flex justify-end space-x-2 pt-4">
+          <button
+            type="button"
+            onClick={() => setShowJoiningModal(false)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className={`px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-indigo-800 flex items-center justify-center min-h-[42px] ${
+              submitting ? 'opacity-90 cursor-not-allowed' : ''
+            }`}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-white mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Submitting...
+              </>
+            ) : 'Submit'}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
     </div>
   );
 };
