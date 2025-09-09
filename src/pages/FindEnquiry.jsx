@@ -869,7 +869,7 @@ const handleSubmit = async (e) => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Present Address</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Current Address</label>
                 <textarea
                   name="presentAddress"
                   value={formData.presentAddress}

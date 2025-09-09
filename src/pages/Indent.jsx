@@ -654,10 +654,6 @@ const fetchLastIndentNumber = async () => {
         <h2 className="text-lg font-bold text-gray-800 mb-4">
           Indent Management
         </h2>
-        <p className="text-gray-600">
-          Create new indents for job positions. Once created, indents will be
-          available in the Social Site section for further processing.
-        </p>
       </div>
 
       <div className="bg-white shadow-lg rounded-lg overflow-hidden">

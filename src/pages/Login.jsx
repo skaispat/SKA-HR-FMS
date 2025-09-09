@@ -9,20 +9,21 @@ const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-
-    const [submitting, setSubmitting] = useState(false);
-    const login = useAuthStore((state) => state.login);
+  const [submitting, setSubmitting] = useState(false);
+  const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-setSubmitting(true)
+    setSubmitting(true);
+
     try {
       const res = await fetch(SHEET_API_URL);
       const json = await res.json();
 
       if (!json.success) {
         toast.error('Error fetching data');
+        setSubmitting(false);
         return;
       }
 
@@ -37,19 +38,27 @@ setSubmitting(true)
       const matchedUser = users.find(
         (u) => u.Username === username && u.Password === password
       );
-    if (matchedUser) {
-  toast.success('Login successful!');
-  localStorage.setItem('user', JSON.stringify(matchedUser));
-  setSubmitting(false);
-  navigate('/', { replace: true });  // Add replace: true to prevent going back to login
-} else {
-  toast.error('Invalid credentials');
-  setSubmitting(false);
-}
-
+      
+      if (matchedUser) {
+        toast.success('Login successful!');
+        localStorage.setItem('user', JSON.stringify(matchedUser));
+        login(matchedUser); // Update auth store
+        
+        const adminStatus = matchedUser.Admin ? matchedUser.Admin.trim().toLowerCase() : 'no';
+        
+        if (adminStatus === "yes") {
+          navigate("/", { replace: true });
+        } else {
+          navigate("/my-profile", { replace: true });
+        }
+      } else {
+        toast.error('Invalid credentials');
+      }
     } catch (err) {
       console.error(err);
       toast.error('Network error');
+    } finally {
+      setSubmitting(false);
     }
   };
 

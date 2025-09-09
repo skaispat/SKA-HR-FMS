@@ -24,6 +24,9 @@ import Attendancedaily from './pages/Attendancedaily';
 import Report from './pages/Report';
 import Payroll from './pages/Payroll';
 import MisReport from './pages/MisReport';
+import Joining from './pages/Joining';
+import GatePass from './pages/GatePass';
+import GatePassRequest from './pages/GatePassRequest';
 
 function App() {
   return (
@@ -43,6 +46,7 @@ function App() {
             {/* <Route path="social-site" element={<SocialSite />} /> */}
             <Route path="find-enquiry" element={<FindEnquiry />} />
             <Route path="call-tracker" element={<CallTracker />} />
+            <Route path='joining' element={<Joining />} />
             <Route path="after-joining-work" element={<AfterJoiningWork />} />
             <Route path="leaving" element={<Leaving />} />
             <Route path="after-leaving-work" element={<AfterLeavingWork />} />
@@ -53,6 +57,8 @@ function App() {
             <Route path="my-salary" element={<MySalary />} />
             <Route path="company-calendar" element={<CompanyCalendar />} />
              <Route path="leave-management" element={<LeaveManagement />} />
+             <Route path="gate-pass" element={<GatePass />} />
+             <Route path="gate-pass-request" element={<GatePassRequest />} />
               <Route path="attendance" element={<Attendance />} />
               <Route path="attendancedaily" element={<Attendancedaily />} />
               <Route path="report" element={<Report />} />
