@@ -822,8 +822,8 @@ const handleLeaveAction = async (action) => {
             type="text"
             name="designation"
             value={formData.designation}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
-            readOnly
+            onChange={handleInputChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 

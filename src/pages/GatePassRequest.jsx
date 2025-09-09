@@ -22,7 +22,7 @@ const GatePassRequest = () => {
   const [canSubmitRequest, setCanSubmitRequest] = useState(true);
   const [monthlyRequestCount, setMonthlyRequestCount] = useState(0);
 
-  const [formData, setFormData] = useState({
+ const [formData, setFormData] = useState({
     employeeId: employeeId || '',
     employeeName: currentUserName,
     department: '',
@@ -31,7 +31,7 @@ const GatePassRequest = () => {
     departureTime: '',
     arrivalTime: '',
     hodName: '',
-    whatsappNumber: '',
+    whatsappNumber: '', // Start with empty string
     gatePassImage: null
   });
 
@@ -99,7 +99,7 @@ const fetchEmployees = async () => {
             employeeId: userData.id,
             employeeName: userData.name,
             department: userData.department,
-            whatsappNumber: userData.whatsappNumber
+            whatsappNumber: userData.whatsappNumber // Prefill but allow editing
           }));
         }
       } else {
@@ -863,7 +863,7 @@ return (
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Arrival at Plant *
+                    Arrival at Plant
                   </label>
                   <input
                     type="datetime-local"
@@ -871,7 +871,6 @@ return (
                     value={formData.arrivalTime}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    required
                   />
                 </div>
               </div>
@@ -904,8 +903,9 @@ return (
                   type="tel"
                   name="whatsappNumber"
                   value={formData.whatsappNumber}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
-                  readOnly
+                  onChange={handleInputChange} // Allow manual editing
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Enter WhatsApp number"
                 />
               </div>
 

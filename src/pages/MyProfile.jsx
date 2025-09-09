@@ -8,6 +8,50 @@ const MyProfile = () => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Function to get displayable image URL from Google Drive
+  const getDisplayableImageUrl = (url) => {
+    if (!url) return null;
+
+    try {
+      // Handle direct file ID URLs (https://drive.google.com/file/d/FILE_ID/view)
+      const directMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (directMatch && directMatch[1]) {
+        return `https://drive.google.com/thumbnail?id=${directMatch[1]}&sz=w400`;
+      }
+      
+      // Handle uc?export=view&id= format (https://drive.google.com/uc?export=view&id=FILE_ID)
+      const ucMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (ucMatch && ucMatch[1]) {
+        return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=w400`;
+      }
+      
+      // Handle open?id= format (https://drive.google.com/open?id=FILE_ID)
+      const openMatch = url.match(/open\?id=([a-zA-Z0-9_-]+)/);
+      if (openMatch && openMatch[1]) {
+        return `https://drive.google.com/thumbnail?id=${openMatch[1]}&sz=w400`;
+      }
+      
+      // If it's already a thumbnail URL, return as is
+      if (url.includes("thumbnail?id=")) {
+        return url;
+      }
+      
+      // If URL contains a file ID but doesn't match any pattern above
+      // Try to extract any potential file ID (at least 25 characters)
+      const anyIdMatch = url.match(/([a-zA-Z0-9_-]{25,})/);
+      if (anyIdMatch && anyIdMatch[1]) {
+        return `https://drive.google.com/thumbnail?id=${anyIdMatch[1]}&sz=w400`;
+      }
+      
+      // If no file ID found, return the original URL with cache buster
+      const cacheBuster = Date.now();
+      return url.includes("?") ? `${url}&cb=${cacheBuster}` : `${url}?cb=${cacheBuster}`;
+    } catch (e) {
+      console.error("Error processing image URL:", url, e);
+      return url; // Return original URL as fallback
+    }
+  };
+
   const fetchJoiningData = async () => {
     try {
       // Get user data from localStorage
@@ -40,8 +84,30 @@ const MyProfile = () => {
         throw new Error('Expected array data not received');
       }
 
-      const headers = rawData[5];
-      const dataRows = rawData.length > 6 ? rawData.slice(6) : [];
+      // Find the header row by looking for the 'SKA-Joining ID' column
+      let headerRowIndex = -1;
+      let headers = [];
+      
+      for (let i = 0; i < rawData.length; i++) {
+        const row = rawData[i];
+        if (row && Array.isArray(row)) {
+          const joiningIdIndex = row.findIndex(cell => 
+            cell && cell.toString().trim().toLowerCase().includes('ska-joining id')
+          );
+          
+          if (joiningIdIndex !== -1) {
+            headerRowIndex = i;
+            headers = row.map(h => h?.toString().trim());
+            break;
+          }
+        }
+      }
+      
+      if (headerRowIndex === -1) {
+        throw new Error('Could not find header row with SKA-Joining ID column');
+      }
+
+      const dataRows = rawData.length > headerRowIndex + 1 ? rawData.slice(headerRowIndex + 1) : [];
       
       const getIndex = (headerName) => {
         const index = headers.findIndex(h => 
@@ -60,11 +126,11 @@ const MyProfile = () => {
         candidatePhoto: row[getIndex("Candidate's Photo")] || '',
         fatherName: row[getIndex('Father Name')] || '',
         dateOfJoining: row[getIndex('Date Of Joining')] || '',
-        joiningPlace: row[getIndex('Joining Place')] || '',
+        joiningPlace: '',
         designation: row[getIndex('Designation')] || '',
         salary: row[getIndex('Department')] || '',
         currentAddress: row[getIndex('Current Address')] || '',
-        addressAsPerAadhar: row[getIndex('Address As Per Aadhar Card')] || '',
+        addressAsPerAadhar: '',
         bodAsPerAadhar: row[getIndex('Date Of Birth As Per Aadhar Card')] || '',
         gender: row[getIndex('Gender')] || '',
         mobileNo: row[getIndex('Mobile No.')] || '',
@@ -74,6 +140,9 @@ const MyProfile = () => {
         companyName: row[getIndex('Department')] || '',
         aadharNo: row[getIndex('Aadhar Card No')] || '',
       }));
+
+      console.log(processedData);
+      
 
       // Filter data for the current user
       const filteredData = processedData.filter(task => 
@@ -93,17 +162,44 @@ const MyProfile = () => {
             const enquiryResult = await enquiryResponse.json();
             if (enquiryResult.success) {
               const enquiryData = enquiryResult.data || enquiryResult;
-              const enquiryHeaders = enquiryData[0];
               
-              // Find the column index for candidate photo (Column P, index 15)
-              const photoIndex = 15; // Column P is index 15 (0-based)
+              // Find the header row in ENQUIRY sheet
+              let enquiryHeaderRowIndex = -1;
+              let enquiryHeaders = [];
               
-              // Find the row with matching employee ID
-              for (let i = 1; i < enquiryData.length; i++) {
+              for (let i = 0; i < enquiryData.length; i++) {
                 const row = enquiryData[i];
-                if (row[0] === profile.joiningNo && row[photoIndex]) {
-                  profile.candidatePhoto = row[photoIndex];
-                  break;
+                if (row && Array.isArray(row)) {
+                  const candidatePhotoIndex = row.findIndex(cell => 
+                    cell && cell.toString().trim().toLowerCase().includes("candidate's photo")
+                  );
+                  
+                  if (candidatePhotoIndex !== -1) {
+                    enquiryHeaderRowIndex = i;
+                    enquiryHeaders = row.map(h => h?.toString().trim());
+                    break;
+                  }
+                }
+              }
+              
+              if (enquiryHeaderRowIndex !== -1) {
+                const photoIndex = enquiryHeaders.findIndex(h => 
+                  h && h.toLowerCase().includes("candidate's photo")
+                );
+                
+                // Find the row with matching employee ID
+                const employeeIdIndex = enquiryHeaders.findIndex(h => 
+                  h && h.toLowerCase().includes('ska-joining id')
+                );
+                
+                if (employeeIdIndex !== -1 && photoIndex !== -1) {
+                  for (let i = enquiryHeaderRowIndex + 1; i < enquiryData.length; i++) {
+                    const row = enquiryData[i];
+                    if (row[employeeIdIndex] === profile.joiningNo && row[photoIndex]) {
+                      profile.candidatePhoto = row[photoIndex];
+                      break;
+                    }
+                  }
                 }
               }
             }
@@ -156,14 +252,36 @@ const MyProfile = () => {
       const fullDataResult = await fullDataResponse.json();
       const allData = fullDataResult.data || fullDataResult;
 
-      // 2. Find header row (assuming it's row 6 as in your original code)
-      let headerRowIndex = 5; // 0-based index for row 6
-      const headers = allData[headerRowIndex].map(h => h?.toString().trim());
+      // 2. Find header row by looking for the 'SKA-Joining ID' column
+      let headerRowIndex = -1;
+      let headers = [];
+      
+      for (let i = 0; i < allData.length; i++) {
+        const row = allData[i];
+        if (row && Array.isArray(row)) {
+          const joiningIdIndex = row.findIndex(cell => 
+            cell && cell.toString().trim().toLowerCase().includes('ska-joining id')
+          );
+          
+          if (joiningIdIndex !== -1) {
+            headerRowIndex = i;
+            headers = row.map(h => h?.toString().trim());
+            break;
+          }
+        }
+      }
+      
+      if (headerRowIndex === -1) {
+        throw new Error("Could not find header row with 'SKA-Joining ID' column");
+      }
 
       // 3. Find Employee ID column index
-      const employeeIdIndex = headers.findIndex(h => h?.toLowerCase() === "employee id");
+      const employeeIdIndex = headers.findIndex(h => 
+        h && h.toLowerCase().includes('ska-joining id')
+      );
+      
       if (employeeIdIndex === -1) {
-        throw new Error("Could not find 'Employee ID' column");
+        throw new Error("Could not find 'SKA-Joining ID' column");
       }
 
       // 4. Find the employee row index
@@ -180,25 +298,24 @@ const MyProfile = () => {
       // 6. Apply updates to the row data
       // Map form fields to their respective column indices
       const headerMap = {
-        'Mobile No.': headers.findIndex(h => h?.toLowerCase() === 'mobile no.'),
-        'Family Mobile No.': headers.findIndex(h => h?.toLowerCase() === 'family mobile no.'),
-        'Personal Email-Id': headers.findIndex(h => h?.toLowerCase() === 'personal email-id'),
-        'Current Address': headers.findIndex(h => h?.toLowerCase() === 'current address')
-        // Add more fields as needed
+        'mobileNo': headers.findIndex(h => h && h.toLowerCase().includes('mobile no')),
+        'familyMobileNo': headers.findIndex(h => h && h.toLowerCase().includes('family mobile no')),
+        'email': headers.findIndex(h => h && h.toLowerCase().includes('personal email-id')),
+        'currentAddress': headers.findIndex(h => h && h.toLowerCase().includes('current address'))
       };
 
       // Only update fields that are editable in the form
-      if (headerMap['Mobile No.'] !== -1) {
-        currentRow[headerMap['Mobile No.']] = formData.mobileNo || '';
+      if (headerMap['mobileNo'] !== -1) {
+        currentRow[headerMap['mobileNo']] = formData.mobileNo || '';
       }
-      if (headerMap['Family Mobile No.'] !== -1) {
-        currentRow[headerMap['Family Mobile No.']] = formData.familyMobileNo || '';
+      if (headerMap['familyMobileNo'] !== -1) {
+        currentRow[headerMap['familyMobileNo']] = formData.familyMobileNo || '';
       }
-      if (headerMap['Personal Email-Id'] !== -1) {
-        currentRow[headerMap['Personal Email-Id']] = formData.email || '';
+      if (headerMap['email'] !== -1) {
+        currentRow[headerMap['email']] = formData.email || '';
       }
-      if (headerMap['Current Address'] !== -1) {
-        currentRow[headerMap['Current Address']] = formData.currentAddress || '';
+      if (headerMap['currentAddress'] !== -1) {
+        currentRow[headerMap['currentAddress']] = formData.currentAddress || '';
       }
 
       // 7. Prepare payload
@@ -251,7 +368,7 @@ const MyProfile = () => {
   if (loading) {
     return <div className="page-content p-6"><div className="flex justify-center flex-col items-center">
                         <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
-                        <span className="text-gray-600 text-sm">Loading pending calls...</span>
+                        <span className="text-gray-600 text-sm">Loading profile data...</span>
                       </div></div>;
   }
 
@@ -300,12 +417,24 @@ const MyProfile = () => {
             <div className="w-32 h-32 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden">
               {profileData.candidatePhoto ? (
                 <img
-                  src={profileData.candidatePhoto}
+                  src={getDisplayableImageUrl(profileData.candidatePhoto)}
                   alt="Profile"
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    e.target.style.display = "none";
-                    e.target.nextSibling.style.display = "flex";
+                    console.log("Image failed to load:", e.target.src);
+                    // First try the original URL directly
+                    if (e.target.src !== profileData.candidatePhoto) {
+                      console.log("Trying original URL:", profileData.candidatePhoto);
+                      e.target.src = profileData.candidatePhoto;
+                    } else {
+                      // If that also fails, show user icon
+                      console.log("Both thumbnail and original URL failed");
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "flex";
+                    }
+                  }}
+                  onLoad={(e) => {
+                    console.log("Image loaded successfully:", e.target.src);
                   }}
                 />
               ) : null}
@@ -327,135 +456,135 @@ const MyProfile = () => {
 
         {/* Personal Information */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border p-6">
-  <h3 className="text-lg font-bold text-gray-800 mb-6">Personal Information</h3>
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-    {/* First Column */}
-    <div className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          <User size={16} className="inline mr-2" />
-          Full Name
-        </label>
-        <p className="text-gray-800 font-medium">{profileData.candidateName}</p>
-      </div>
-      
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          <Building size={16} className="inline mr-2" />
-          Designation
-        </label>
-        <p className="text-gray-800">{profileData.designation}</p>
-      </div>
+          <h3 className="text-lg font-bold text-gray-800 mb-6">Personal Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* First Column */}
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <User size={16} className="inline mr-2" />
+                  Full Name
+                </label>
+                <p className="text-gray-800 font-medium">{profileData.candidateName}</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Building size={16} className="inline mr-2" />
+                  Designation
+                </label>
+                <p className="text-gray-800">{profileData.designation}</p>
+              </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          <Building size={16} className="inline mr-2" />
-          Department
-        </label>
-        <p className="text-gray-800">{profileData.companyName}</p>
-      </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Building size={16} className="inline mr-2" />
+                  Department
+                </label>
+                <p className="text-gray-800">{profileData.companyName}</p>
+              </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          <Calendar size={16} className="inline mr-2" />
-          Date of Birth
-        </label>
-        <p className="text-gray-800">{profileData.bodAsPerAadhar}</p>
-      </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar size={16} className="inline mr-2" />
+                  Date of Birth
+                </label>
+                <p className="text-gray-800">{profileData.bodAsPerAadhar}</p>
+              </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
-        <p className="text-gray-800">{profileData.gender}</p>
-      </div>
-    </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                <p className="text-gray-800">{profileData.gender}</p>
+              </div>
+            </div>
 
-    {/* Second Column */}
-    <div className="space-y-6">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Father's Name</label>
-        <p className="text-gray-800">{profileData.fatherName}</p>
-      </div>
+            {/* Second Column */}
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Father's Name</label>
+                <p className="text-gray-800">{profileData.fatherName}</p>
+              </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          <Calendar size={16} className="inline mr-2" />
-          Joining Date
-        </label>
-        <p className="text-gray-800">{profileData.dateOfJoining}</p>
-      </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar size={16} className="inline mr-2" />
+                  Joining Date
+                </label>
+                <p className="text-gray-800">{profileData.dateOfJoining}</p>
+              </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          <Mail size={16} className="inline mr-2" />
-          Email Address
-        </label>
-        {isEditing ? (
-          <input
-            type="email"
-            name="email"
-            value={formData.email || ''}
-            onChange={handleInputChange}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        ) : (
-          <p className="text-gray-800">{profileData.email}</p>
-        )}
-      </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Mail size={16} className="inline mr-2" />
+                  Email Address
+                </label>
+                {isEditing ? (
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email || ''}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                ) : (
+                  <p className="text-gray-800">{profileData.email}</p>
+                )}
+              </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          <Phone size={16} className="inline mr-2" />
-          Phone Number
-        </label>
-        {isEditing ? (
-          <input
-            type="tel"
-            name="mobileNo"
-            value={formData.mobileNo || ''}
-            onChange={handleInputChange}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        ) : (
-          <p className="text-gray-800">{profileData.mobileNo}</p>
-        )}
-      </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Phone size={16} className="inline mr-2" />
+                  Phone Number
+                </label>
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    name="mobileNo"
+                    value={formData.mobileNo || ''}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                ) : (
+                  <p className="text-gray-800">{profileData.mobileNo}</p>
+                )}
+              </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact</label>
-        {isEditing ? (
-          <input
-            type="tel"
-            name="familyMobileNo"
-            value={formData.familyMobileNo || ''}
-            onChange={handleInputChange}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        ) : (
-          <p className="text-gray-800">{profileData.familyMobileNo}</p>
-        )}
-      </div>
-    </div>
-  </div>
-  
-  {/* Current Address - Full width below the two columns */}
-  <div className="mt-6 pt-6 border-t border-gray-200">
-    <label className="block text-sm font-medium text-gray-700 mb-2">
-      <MapPin size={16} className="inline mr-2" />
-      Current Address
-    </label>
-    {isEditing ? (
-      <textarea
-        name="currentAddress"
-        value={formData.currentAddress || ''}
-        onChange={handleInputChange}
-        rows={3}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-      />
-    ) : (
-      <p className="text-gray-800 whitespace-pre-line">{profileData.currentAddress}</p>
-    )}
-  </div>
-</div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact</label>
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    name="familyMobileNo"
+                    value={formData.familyMobileNo || ''}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                ) : (
+                  <p className="text-gray-800">{profileData.familyMobileNo}</p>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Current Address - Full width below the two columns */}
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <MapPin size={16} className="inline mr-2" />
+              Current Address
+            </label>
+            {isEditing ? (
+              <textarea
+                name="currentAddress"
+                value={formData.currentAddress || ''}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            ) : (
+              <p className="text-gray-800 whitespace-pre-line">{profileData.currentAddress}</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

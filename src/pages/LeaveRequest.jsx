@@ -19,15 +19,15 @@ const LeaveRequest = () => {
   const [employees, setEmployees] = useState([]);
   const [hodNames, setHodNames] = useState([]);
   const [formData, setFormData] = useState({
-    employeeId: employeeId,
-    employeeName: user.Name || '',
-    designation: '',
-    hodName: '',
-    leaveType: '',
-    fromDate: '',
-    toDate: '',
-    reason: ''
-  });
+  employeeId: employeeId,
+  employeeName: user.Name || '',
+  designation: '',
+  hodName: '',
+  leaveType: '',
+  fromDate: '',
+  toDate: '',
+  reason: ''
+});
 
   const fetchHodNames = async () => {
     try {
@@ -149,12 +149,12 @@ const LeaveRequest = () => {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  const { name, value } = e.target;
+  setFormData(prev => ({
+    ...prev,
+    [name]: value
+  }));
+};
 
   const handleMonthChange = (e) => {
     setSelectedMonth(e.target.value);
@@ -189,8 +189,11 @@ const LeaveRequest = () => {
     return diffDays;
   };
 
-  const calculateDaysInMonth = (startDateStr, endDateStr, month, year) => {
-  if (!startDateStr || !endDateStr || month === 'all') return 0;
+const calculateDaysInMonth = (startDateStr, endDateStr, month, year) => {
+  if (!startDateStr || !endDateStr || month === 'all') {
+    // For "All Months" selection, return the total days
+    return calculateDays(startDateStr, endDateStr);
+  }
   
   let startDate, endDate;
   
@@ -209,43 +212,50 @@ const LeaveRequest = () => {
     endDate = new Date(endDateStr);
   }
   
-  // Adjust start date if it's before the selected month
+  // If the leave doesn't fall in the selected month and year at all, return 0
   const selectedMonthStart = new Date(year, parseInt(month), 1);
   const selectedMonthEnd = new Date(year, parseInt(month) + 1, 0);
   
-  if (startDate < selectedMonthStart) {
-    startDate = selectedMonthStart;
-  }
-  
-  // Adjust end date if it's after the selected month
-  if (endDate > selectedMonthEnd) {
-    endDate = selectedMonthEnd;
-  }
-  
-  // If the adjusted dates are invalid, return 0
-  if (startDate > endDate) {
+  if (endDate < selectedMonthStart || startDate > selectedMonthEnd) {
     return 0;
   }
   
-  const diffTime = endDate - startDate;
+  // Adjust start date if it's before the selected month
+  const adjustedStartDate = startDate < selectedMonthStart ? selectedMonthStart : startDate;
+  
+  // Adjust end date if it's after the selected month
+  const adjustedEndDate = endDate > selectedMonthEnd ? selectedMonthEnd : endDate;
+  
+  // Calculate days in the selected month
+  const diffTime = adjustedEndDate - adjustedStartDate;
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  return diffDays;
+  
+  return Math.max(0, diffDays); // Ensure we don't return negative values
 };
 
-  const formatDOB = (dateString) => {
-    if (!dateString) return '';
-    
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return dateString; // Return as-is if not a valid date
+
+const formatDOB = (dateString) => {
+  if (!dateString) return '';
+  
+  // If already in dd/mm/yyyy format, return as-is
+  if (typeof dateString === 'string' && dateString.includes('/')) {
+    const parts = dateString.split('/');
+    if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+      return dateString;
     }
-    
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    
-    return `${day}/${month}/${year}`;
-  };
+  }
+  
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return dateString; // Return as-is if not a valid date
+  }
+  
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return `${day}/${month}/${year}`;
+};
 
   // Function to parse date string in DD/MM/YYYY format
   const parseDate = (dateStr) => {
@@ -272,66 +282,70 @@ const LeaveRequest = () => {
     return date.getMonth() === parseInt(monthIndex) && date.getFullYear() === parseInt(year);
   };
 
-  const fetchLeaveData = async () => {
-    setLoading(true);
-    setTableLoading(true);
-    setError(null);
+const fetchLeaveData = async () => {
+  setLoading(true);
+  setTableLoading(true);
+  setError(null);
 
-    try {
-      const response = await fetch(
-        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Leave Management&action=fetch'
-      );
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch leave data');
-      }
-      
-      const rawData = result.data || result;
-      console.log("Raw data from API:", rawData);
-      
-      if (!Array.isArray(rawData)) {
-        throw new Error('Expected array data not received');
-      }
-
-      const dataRows = rawData.length > 1 ? rawData.slice(1) : [];
-      
-      // Process and filter data by employee name
-      const processedData = dataRows
-        .map((row, index) => ({
-          id: index + 1,
-          timestamp: row[0] || '',
-          serialNo: row[1] || '',
-          employeeId: row[2] || '',
-          employeeName: row[3] || '',
-          startDate: row[4] || '',
-          endDate: row[5] || '',
-          reason: row[6] || '',
-          days: calculateDays(row[4], row[5]),
-          status: row[7] || 'Pending',
-          leaveType: row[8] || '', // Column I (index 8) - Leave Type
-          appliedDate: row[0] || '', // Using timestamp as applied date
-          approvedBy: row[9] || '', // Adjust index if needed
-        }))
-        .filter(item => item.employeeName === user.Name);
-      
-      console.log("Filtered leave data:", processedData);
-      setLeavesData(processedData);
-     
-    } catch (error) {
-      console.error('Error fetching leave data:', error);
-      setError(error.message);
-      toast.error(`Failed to load leave data: ${error.message}`);
-    } finally {
-      setLoading(false);
-      setTableLoading(false);
+  try {
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Leave Management&action=fetch'
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch leave data');
+    }
+    
+    const rawData = result.data || result;
+    console.log("Raw data from API:", rawData);
+    
+    if (!Array.isArray(rawData)) {
+      throw new Error('Expected array data not received');
+    }
+
+    const dataRows = rawData.length > 1 ? rawData.slice(1) : [];
+    
+    // Process and filter data by employee name
+    // Update column indices according to your requirements:
+    // Column E (index 4) - From Date
+    // Column F (index 5) - To Date
+    // Column L (index 11) - Leave Type
+    const processedData = dataRows
+      .map((row, index) => ({
+        id: index + 1,
+        timestamp: row[0] || '',
+        serialNo: row[1] || '',
+        employeeId: row[2] || '',
+        employeeName: row[3] || '',
+        startDate: row[4] || '', // Column E (index 4) - From Date
+        endDate: row[5] || '',   // Column F (index 5) - To Date
+        reason: row[6] || '',
+        days: calculateDays(row[4], row[5]),
+        status: row[7] || 'Pending',
+        leaveType: row[8] || '', // Column L (index 11) - Leave Type
+        appliedDate: row[0] || '', // Using timestamp as applied date
+        approvedBy: row[9] || '',
+      }))
+      .filter(item => item.employeeName === user.Name);
+    
+    console.log("Filtered leave data:", processedData);
+    setLeavesData(processedData);
+   
+  } catch (error) {
+    console.error('Error fetching leave data:', error);
+    setError(error.message);
+    toast.error(`Failed to load leave data: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setTableLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchLeaveData();
@@ -340,69 +354,69 @@ const LeaveRequest = () => {
     fetchHodNames();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!formData.employeeName || !formData.leaveType || !formData.fromDate || !formData.toDate || !formData.reason || !formData.hodName) {
-      toast.error('Please fill all required fields');
-      return;
-    }
+  if (!formData.employeeName || !formData.leaveType || !formData.fromDate || !formData.toDate || !formData.reason || !formData.hodName) {
+    toast.error('Please fill all required fields');
+    return;
+  }
 
-    try {
-      setSubmitting(true);
-      const now = new Date();
-      const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+  try {
+    setSubmitting(true);
+    const now = new Date();
+    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
 
-      const rowData = [
-        formattedTimestamp,           // Timestamp
-        "",                          // Serial number (empty for auto-increment)
-        formData.employeeId,         // Employee ID
-        formData.employeeName,       // Employee Name
-        formatDOB(formData.fromDate), // Leave Date Start
-        formatDOB(formData.toDate),   // Leave Date End
-        formData.reason,             // Reason
-        "Pending",                   // Status
-        formData.leaveType,          // Leave Type
-        formData.hodName,            // HOD Name (Column J, index 9)
-        formData.designation         // Designation (Column K, index 10)
-      ];
+    const rowData = [
+      formattedTimestamp,           // Timestamp
+      "",                          // Serial number (empty for auto-increment)
+      formData.employeeId,         // Employee ID
+      formData.employeeName,       // Employee Name
+      formatDOB(formData.fromDate), // Leave Date Start (formatted to dd/mm/yyyy)
+      formatDOB(formData.toDate),   // Leave Date End (formatted to dd/mm/yyyy)
+      formData.reason,             // Reason
+      "Pending",                   // Status
+      formData.leaveType,          // Leave Type (Column L, index 11)
+      formData.hodName,            // HOD Name
+      formData.designation,        // Designation
+    ];
 
-      const response = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec', {
-        method: 'POST',
-        body: new URLSearchParams({
-          sheetName: 'Leave Management',
-          action: 'insert',
-          rowData: JSON.stringify(rowData),
-        }),
+    const response = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec', {
+      method: 'POST',
+      body: new URLSearchParams({
+        sheetName: 'Leave Management',
+        action: 'insert',
+        rowData: JSON.stringify(rowData),
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      toast.success('Leave Request submitted successfully!');
+      setFormData({
+        employeeId: employeeId,
+        employeeName: user.Name || '',
+        designation: formData.designation || '',
+        hodName: '',
+        leaveType: '',
+        fromDate: '',
+        toDate: '',
+        reason: ''
       });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success('Leave Request submitted successfully!');
-        setFormData({
-          employeeId: employeeId,
-          employeeName: user.Name || '',
-          designation: formData.designation || '',
-          hodName: '',
-          leaveType: '',
-          fromDate: '',
-          toDate: '',
-          reason: ''
-        });
-        setShowModal(false);
-        // Refresh the data
-        fetchLeaveData();
-      } else {
-        toast.error('Failed to insert: ' + (result.error || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Insert error:', error);
-      toast.error('Something went wrong!');
-    } finally {
-      setSubmitting(false);
+      setShowModal(false);
+      // Refresh the data
+      fetchLeaveData();
+    } else {
+      toast.error('Failed to insert: ' + (result.error || 'Unknown error'));
     }
-  };
+  } catch (error) {
+    console.error('Insert error:', error);
+    toast.error('Something went wrong!');
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const leaveTypes = [
     'Casual Leave',
@@ -425,24 +439,22 @@ const LeaveRequest = () => {
   const yearOptions = getYearOptions();
 
   // Calculate leave counts based on selected month and year
-  const calculateLeaveCounts = () => {
+const calculateLeaveCounts = () => {
   // Filter for approved leaves for this specific employee
   const approvedLeaves = leavesData.filter(leave => 
     leave.status && leave.status.toLowerCase() === 'approved' && 
-    leave.employeeName === user.Name &&
-    (selectedMonth === 'all' || 
-     isDateInSelectedPeriod(leave.startDate, selectedMonth, selectedYear) || 
-     isDateInSelectedPeriod(leave.endDate, selectedMonth, selectedYear))
+    leave.employeeName === user.Name
   );
-    return {
+  
+  return {
     'Casual Leave': approvedLeaves
-      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'casual leave')
+      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase().includes('casual'))
       .reduce((sum, leave) => sum + calculateDaysInMonth(leave.startDate, leave.endDate, selectedMonth, parseInt(selectedYear)), 0),
     'Earned Leave': approvedLeaves
-      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'earned leave')
+      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase().includes('earned'))
       .reduce((sum, leave) => sum + calculateDaysInMonth(leave.startDate, leave.endDate, selectedMonth, parseInt(selectedYear)), 0),
     'Normal Leave': approvedLeaves
-      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase() === 'normal leave')
+      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase().includes('normal'))
       .reduce((sum, leave) => sum + calculateDaysInMonth(leave.startDate, leave.endDate, selectedMonth, parseInt(selectedYear)), 0),
   };
 };
@@ -571,7 +583,7 @@ const LeaveRequest = () => {
       </div>
 
       {/* Leave Balance Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
   {Object.entries(calculateLeaveCounts()).map(([leaveType, days]) => (
     <div key={leaveType} className="bg-white rounded-xl shadow-lg border p-6">
       <div className="flex items-center justify-between">
@@ -588,6 +600,24 @@ const LeaveRequest = () => {
       </div>
     </div>
   ))}
+  
+  {/* Total Leave Card */}
+  <div className="bg-white rounded-xl shadow-lg border p-6">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-600 font-medium">Total Leave</p>
+        <h3 className="text-2xl font-bold text-gray-800">
+          {Object.values(calculateLeaveCounts()).reduce((sum, days) => sum + days, 0)}
+        </h3>
+        <p className="text-xs text-gray-500">
+          {selectedMonth === 'all' ? 'All approved days' : `Total days in ${monthOptions.find(m => m.value === selectedMonth)?.label || ''}`}
+        </p>
+      </div>
+      <div className="p-3 rounded-full bg-indigo-100">
+        <Calendar size={24} className="text-indigo-600" />
+      </div>
+    </div>
+  </div>
 </div>
 
       {/* Leave Requests Table */}
@@ -622,12 +652,10 @@ const LeaveRequest = () => {
                     .map((request) => (
                     <tr key={request.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.leaveType}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDOB(request.startDate)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {request.startDate}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {request.endDate}
-                      </td>
+  {formatDOB(request.endDate)}
+</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{request.days}</td>
                       <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{request.reason}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -692,15 +720,15 @@ const LeaveRequest = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
-                <input
-                  type="text"
-                  name="designation"
-                  value={formData.designation}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
-                  readOnly
-                />
-              </div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+          <input
+            type="text"
+            name="designation"
+            value={formData.designation}
+            onChange={handleInputChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name *</label>
