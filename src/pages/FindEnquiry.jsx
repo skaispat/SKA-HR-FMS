@@ -153,6 +153,31 @@ const [formData, setFormData] = useState({
     }
   };
 
+   const generateNextAAPIndentNumber = () => {
+    // Extract all indent numbers from both indentData and enquiryData
+    const allIndentNumbers = [
+      ...indentData.map(item => item.indentNo),
+      ...enquiryData.map(item => item.indentNo)
+    ].filter(Boolean); // Remove empty/null values
+
+    // Find the highest AAP number
+    let maxAAPNumber = 0;
+    
+    allIndentNumbers.forEach(indentNo => {
+      const match = indentNo.match(/^AAP-(\d+)$/i);
+      if (match && match[1]) {
+        const num = parseInt(match[1], 10);
+        if (num > maxAAPNumber) {
+          maxAAPNumber = num;
+        }
+      }
+    });
+
+    // Return the next AAP number
+    const nextNumber = maxAAPNumber + 1;
+    return `AAP-${String(nextNumber).padStart(2, '0')}`;
+  };
+
   // Generate candidate number based on existing enquiries
   const generateCandidateNumber = () => {
     if (enquiryData.length === 0) {
@@ -224,14 +249,37 @@ const [formData, setFormData] = useState({
     fetchAllData();
   }, []);
 
-  // const pendingData = indentData.filter(item => 
-  //   !enquiryData.some(enquiry => enquiry.indentNo === item.indentNo)
-  // );
-
   const historyData = enquiryData;
 
-  const handleEnquiryClick = (item) => {
-    setSelectedItem(item);
+ const handleEnquiryClick = (item = null) => {
+    let indentNo = '';
+    let isNewAAP = false;
+    
+    if (item) {
+      setSelectedItem(item);
+      indentNo = item.indentNo;
+    } else {
+      // Generate a new AAP indent number for new enquiries
+      indentNo = generateNextAAPIndentNumber();
+      isNewAAP = true;
+      
+      // Create a default empty item for new enquiry
+      setSelectedItem({
+        indentNo: indentNo,
+        post: '',
+        gender: '',
+        prefer: '',
+        numberOfPost: '',
+        competitionDate: '',
+        socialSite: '',
+        status: 'NeedMore',
+        plannedDate: '',
+        actual: '',
+        experience: ''
+      });
+    }
+
+    
     const candidateNo = generateCandidateNumber();
     setGeneratedCandidateNo(candidateNo);
     setFormData({
@@ -251,7 +299,7 @@ const [formData, setFormData] = useState({
       referenceBy: '',
       presentAddress: '',
       aadharNo: '',
-      status: 'NeedMore',
+      status: 'NeedMore'
     });
     setShowModal(true);
   };
@@ -521,9 +569,18 @@ const handleSubmit = async (e) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 opacity-60" />
+            <Search
+              size={20}
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 opacity-60"
+            />
           </div>
         </div>
+        <button
+          onClick={() => handleEnquiryClick()}
+          className="px-3 py-2 text-white bg-indigo-700 rounded-md hover:bg-opacity-90 text-sm"
+        >
+          New Enquiry
+        </button>
       </div>
 
       {/* Tabs */}
@@ -532,22 +589,22 @@ const handleSubmit = async (e) => {
           <nav className="flex -mb-px">
             <button
               className={`py-4 px-6 font-medium text-sm border-b-2 ${
-                activeTab === 'pending'
-                  ?'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "pending"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
-              onClick={() => setActiveTab('pending')}
+              onClick={() => setActiveTab("pending")}
             >
               <Clock size={16} className="inline mr-2" />
               Pending ({filteredPendingData.length})
             </button>
             <button
               className={`py-4 px-6 font-medium text-sm border-b-2 ${
-                activeTab === 'history'
-                  ? 'border-indigo-500 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                activeTab === "history"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}
-              onClick={() => setActiveTab('history')}
+              onClick={() => setActiveTab("history")}
             >
               <CheckCircle size={16} className="inline mr-2" />
               History ({filteredHistoryData.length})
@@ -557,18 +614,32 @@ const handleSubmit = async (e) => {
 
         {/* Tab Content */}
         <div className="p-6">
-          {activeTab === 'pending' && (
+          {activeTab === "pending" && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 ">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Action</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Indent No.</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Post</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Gender</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Prefer</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Number Of Post</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">Competition Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
+                      Action
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
+                      Indent No.
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
+                      Post
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
+                      Gender
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
+                      Prefer
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
+                      Number Of Post
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
+                      Competition Date
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -577,14 +648,18 @@ const handleSubmit = async (e) => {
                       <td colSpan="7" className="px-6 py-12 text-center">
                         <div className="flex justify-center flex-col items-center">
                           <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
-                          <span className="text-gray-600 text-sm">Loading pending enquiries...</span>
+                          <span className="text-gray-600 text-sm">
+                            Loading pending enquiries...
+                          </span>
                         </div>
                       </td>
                     </tr>
                   ) : filteredPendingData.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="px-6 py-12 text-center">
-                        <p className="text-gray-500">No pending enquiries found.</p>
+                        <p className="text-gray-500">
+                          No pending enquiries found.
+                        </p>
                       </td>
                     </tr>
                   ) : (
@@ -598,13 +673,27 @@ const handleSubmit = async (e) => {
                             Enquiry
                           </button>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.indentNo}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.post}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.gender}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.prefer || '-'} {item.experience}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.numberOfPost}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {item.competitionDate ? new Date(item.competitionDate).toLocaleDateString() : '-'}
+                          {item.indentNo}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.post}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.gender}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.prefer || "-"} {item.experience}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.numberOfPost}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.competitionDate
+                            ? new Date(
+                                item.competitionDate
+                              ).toLocaleDateString()
+                            : "-"}
                         </td>
                       </tr>
                     ))
@@ -614,20 +703,38 @@ const handleSubmit = async (e) => {
             </div>
           )}
 
-          {activeTab === 'history' && (
+          {activeTab === "history" && (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Indent No.</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enquiry No.</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Post</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Candidate Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resume</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Indent No.
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Enquiry No.
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Post
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Candidate Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Phone
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Experience
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Photo
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Resume
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -636,49 +743,71 @@ const handleSubmit = async (e) => {
                       <td colSpan="9" className="px-6 py-12 text-center">
                         <div className="flex justify-center flex-col items-center">
                           <div className="w-6 h-6 border-4 border-indigo-500 border-dashed rounded-full animate-spin mb-2"></div>
-                          <span className="text-gray-600 text-sm">Loading enquiry history...</span>
+                          <span className="text-gray-600 text-sm">
+                            Loading enquiry history...
+                          </span>
                         </div>
                       </td>
                     </tr>
                   ) : filteredHistoryData.length === 0 ? (
                     <tr>
                       <td colSpan="9" className="px-6 py-12 text-center">
-                        <p className="text-gray-500">No enquiry history found.</p>
+                        <p className="text-gray-500">
+                          No enquiry history found.
+                        </p>
                       </td>
                     </tr>
                   ) : (
                     filteredHistoryData.map((item) => (
                       <tr key={item.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.indentNo}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.candidateEnquiryNo}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.applyingForPost}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.candidateName}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.candidatePhone}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.candidateEmail}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.jobExperience}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.indentNo}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.candidateEnquiryNo}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.applyingForPost}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.candidateName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.candidatePhone}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.candidateEmail}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.jobExperience}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.candidatePhoto ? (
-                            <a 
-                              href={item.candidatePhoto} 
-                              target="_blank" 
+                            <a
+                              href={item.candidatePhoto}
+                              target="_blank"
                               rel="noopener noreferrer"
                               className="text-indigo-600 hover:text-indigo-800"
                             >
                               View
                             </a>
-                          ) : '-'}
+                          ) : (
+                            "-"
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.candidateResume ? (
-                            <a 
-                              href={item.candidateResume} 
-                              target="_blank" 
+                            <a
+                              href={item.candidateResume}
+                              target="_blank"
                               rel="noopener noreferrer"
                               className="text-indigo-600 hover:text-indigo-800"
                             >
                               View
                             </a>
-                          ) : '-'}
+                          ) : (
+                            "-"
+                          )}
                         </td>
                       </tr>
                     ))
@@ -690,20 +819,21 @@ const handleSubmit = async (e) => {
         </div>
       </div>
 
-      {/* Modal */}
       {showModal && selectedItem && (
         <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b border-gray-300 border-opacity-20">
-              <h3 className="text-lg font-medium text-gray-500">Candidate Enquiry Form</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-opacity-80">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-gray-500 hover:text-gray-700 flex right-4"
+              >
                 <X size={20} />
               </button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Indent No.</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Indent No.
+                  </label>
                   <input
                     type="text"
                     value={selectedItem.indentNo}
@@ -712,7 +842,9 @@ const handleSubmit = async (e) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Candidate Enquiry No.</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Candidate Enquiry No.
+                  </label>
                   <input
                     type="text"
                     value={generatedCandidateNo}
@@ -721,16 +853,25 @@ const handleSubmit = async (e) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Applying For Post</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Applying For Post
+                  </label>
                   <input
                     type="text"
                     value={selectedItem.post}
-                    disabled
-                    className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 bg-white bg-opacity-5 text-gray-500"
+                    onChange={(e) => {
+                      setSelectedItem((prev) => ({
+                        ...prev,
+                        post: e.target.value,
+                      }));
+                    }}
+                    className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Candidate Name *</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Candidate Name *
+                  </label>
                   <input
                     type="text"
                     name="candidateName"
@@ -741,7 +882,9 @@ const handleSubmit = async (e) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Candidate DOB</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Candidate DOB
+                  </label>
                   <input
                     type="date"
                     name="candidateDOB"
@@ -751,7 +894,9 @@ const handleSubmit = async (e) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Candidate Phone *</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Candidate Phone *
+                  </label>
                   <input
                     type="tel"
                     name="candidatePhone"
@@ -762,7 +907,9 @@ const handleSubmit = async (e) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Candidate Email</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Candidate Email
+                  </label>
                   <input
                     type="email"
                     name="candidateEmail"
@@ -772,7 +919,9 @@ const handleSubmit = async (e) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Previous Company</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Previous Company
+                  </label>
                   <input
                     type="text"
                     name="previousCompany"
@@ -782,7 +931,9 @@ const handleSubmit = async (e) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Job Experience</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Job Experience
+                  </label>
                   <input
                     type="text"
                     name="jobExperience"
@@ -791,18 +942,10 @@ const handleSubmit = async (e) => {
                     className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
                   />
                 </div>
-                {/* <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Last Salary Drawn</label>
-                  <input
-                    type="number"
-                    name="lastSalary"
-                    value={formData.lastSalary}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
-                  />
-                </div> */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Previous Position</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Previous Position
+                  </label>
                   <input
                     type="text"
                     name="previousPosition"
@@ -811,18 +954,10 @@ const handleSubmit = async (e) => {
                     className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
                   />
                 </div>
-                {/* <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Reason for Leaving</label>
-                  <input
-                    type="text"
-                    name="reasonForLeaving"
-                    value={formData.reasonForLeaving}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
-                  />
-                </div> */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Marital Status</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Marital Status
+                  </label>
                   <select
                     name="maritalStatus"
                     value={formData.maritalStatus}
@@ -835,28 +970,10 @@ const handleSubmit = async (e) => {
                     <option value="Divorced">Divorced</option>
                   </select>
                 </div>
-                {/* <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Last Employer Mobile</label>
-                  <input
-                    type="tel"
-                    name="lastEmployerMobile"
-                    value={formData.lastEmployerMobile}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
-                  />
-                </div> */}
-                {/* <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Reference By</label>
-                  <input
-                    type="text"
-                    name="referenceBy"
-                    value={formData.referenceBy}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500 placeholder-white placeholder-opacity-60"
-                  />
-                </div> */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Aadhar No.*</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Aadhar No.*
+                  </label>
                   <input
                     type="text"
                     name="aadharNo"
@@ -867,9 +984,11 @@ const handleSubmit = async (e) => {
                   />
                 </div>
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Current Address</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Current Address
+                </label>
                 <textarea
                   name="presentAddress"
                   value={formData.presentAddress}
@@ -881,12 +1000,14 @@ const handleSubmit = async (e) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Candidate Photo</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Candidate Photo
+                  </label>
                   <div className="flex items-center space-x-2">
                     <input
                       type="file"
                       accept="image/*,.pdf,.doc,.docx"
-                      onChange={(e) => handleFileChange(e, 'candidatePhoto')}
+                      onChange={(e) => handleFileChange(e, "candidatePhoto")}
                       className="hidden"
                       id="photo-upload"
                     />
@@ -895,27 +1016,35 @@ const handleSubmit = async (e) => {
                       className="flex items-center px-4 py-2 border border-gray-300 border-opacity-30 rounded-md cursor-pointer hover:bg-white hover:bg-opacity-10 text-gray-500"
                     >
                       <Upload size={16} className="mr-2" />
-                      {uploadingPhoto ? 'Uploading...' : 'Upload File'}
+                      {uploadingPhoto ? "Uploading..." : "Upload File"}
                     </label>
                     {formData.candidatePhoto && !uploadingPhoto && (
-                      <span className="text-sm text-gray-500 opacity-80">{formData.candidatePhoto.name}</span>
+                      <span className="text-sm text-gray-500 opacity-80">
+                        {formData.candidatePhoto.name}
+                      </span>
                     )}
                     {uploadingPhoto && (
                       <div className="flex items-center">
                         <div className="w-4 h-4 border-2 border-indigo-500 border-dashed rounded-full animate-spin mr-2"></div>
-                        <span className="text-sm text-gray-500">Uploading photo...</span>
+                        <span className="text-sm text-gray-500">
+                          Uploading photo...
+                        </span>
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Max 10MB. Supports: JPG, JPEG, PNG, PDF, DOC, DOCX</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Max 10MB. Supports: JPG, JPEG, PNG, PDF, DOC, DOCX
+                  </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Candidate Resume</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Candidate Resume
+                  </label>
                   <div className="flex items-center space-x-2">
                     <input
                       type="file"
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      onChange={(e) => handleFileChange(e, 'candidateResume')}
+                      onChange={(e) => handleFileChange(e, "candidateResume")}
                       className="hidden"
                       id="resume-upload"
                     />
@@ -924,25 +1053,32 @@ const handleSubmit = async (e) => {
                       className="flex items-center px-4 py-2 border border-gray-300 border-opacity-30 rounded-md cursor-pointer hover:bg-white hover:bg-opacity-10 text-gray-500"
                     >
                       <Upload size={16} className="mr-2" />
-                      {uploadingResume ? 'Uploading...' : 'Upload File'}
+                      {uploadingResume ? "Uploading..." : "Upload File"}
                     </label>
                     {formData.candidateResume && !uploadingResume && (
-                      <span className="text-sm text-gray-500 opacity-80">{formData.candidateResume.name}</span>
+                      <span className="text-sm text-gray-500 opacity-80">
+                        {formData.candidateResume.name}
+                      </span>
                     )}
                     {uploadingResume && (
                       <div className="flex items-center">
                         <div className="w-4 h-4 border-2 border-indigo-500 border-dashed rounded-full animate-spin mr-2"></div>
-                        <span className="text-sm text-gray-500">Uploading resume...</span>
+                        <span className="text-sm text-gray-500">
+                          Uploading resume...
+                        </span>
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Max 10MB. Supports: PDF, DOC, DOCX, JPG, JPEG, PNG</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Max 10MB. Supports: PDF, DOC, DOCX, JPG, JPEG, PNG
+                  </p>
                 </div>
-                
               </div>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Status *</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Status *
+                  </label>
                   <select
                     name="status"
                     value={formData.status}
@@ -972,13 +1108,31 @@ const handleSubmit = async (e) => {
                 >
                   {submitting ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       Submitting...
                     </>
-                  ) : 'Submit'}
+                  ) : (
+                    "Submit"
+                  )}
                 </button>
               </div>
             </form>

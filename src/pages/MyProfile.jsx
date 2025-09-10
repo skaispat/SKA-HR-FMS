@@ -7,43 +7,38 @@ const MyProfile = () => {
   const [formData, setFormData] = useState({});
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [leaveData, setLeaveData] = useState([]);
+  const [gatePassData, setGatePassData] = useState([]);
 
-  // Function to get displayable image URL from Google Drive
+
   const getDisplayableImageUrl = (url) => {
     if (!url) return null;
 
     try {
-      // Handle direct file ID URLs (https://drive.google.com/file/d/FILE_ID/view)
       const directMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
       if (directMatch && directMatch[1]) {
         return `https://drive.google.com/thumbnail?id=${directMatch[1]}&sz=w400`;
       }
       
-      // Handle uc?export=view&id= format (https://drive.google.com/uc?export=view&id=FILE_ID)
       const ucMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
       if (ucMatch && ucMatch[1]) {
         return `https://drive.google.com/thumbnail?id=${ucMatch[1]}&sz=w400`;
       }
       
-      // Handle open?id= format (https://drive.google.com/open?id=FILE_ID)
       const openMatch = url.match(/open\?id=([a-zA-Z0-9_-]+)/);
       if (openMatch && openMatch[1]) {
         return `https://drive.google.com/thumbnail?id=${openMatch[1]}&sz=w400`;
       }
       
-      // If it's already a thumbnail URL, return as is
       if (url.includes("thumbnail?id=")) {
         return url;
       }
-      
-      // If URL contains a file ID but doesn't match any pattern above
-      // Try to extract any potential file ID (at least 25 characters)
+
       const anyIdMatch = url.match(/([a-zA-Z0-9_-]{25,})/);
       if (anyIdMatch && anyIdMatch[1]) {
         return `https://drive.google.com/thumbnail?id=${anyIdMatch[1]}&sz=w400`;
       }
       
-      // If no file ID found, return the original URL with cache buster
       const cacheBuster = Date.now();
       return url.includes("?") ? `${url}&cb=${cacheBuster}` : `${url}?cb=${cacheBuster}`;
     } catch (e) {
@@ -52,9 +47,151 @@ const MyProfile = () => {
     }
   };
 
+const fetchLeaveData = async () => {
+  try {
+    // Get employee ID from localStorage
+    const employeeId = localStorage.getItem("employeeId");
+    if (!employeeId) {
+      console.log("No employee ID found for fetching leave data");
+      return;
+    }
+
+    // Fetch data from the Leave Management sheet
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Leave Management&action=fetch'
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch data from Leave Management sheet');
+    }
+    
+    const rawData = result.data || result;
+    
+    if (!Array.isArray(rawData)) {
+      throw new Error('Expected array data not received');
+    }
+
+    // Use row 1 as headers (index 0 in the array)
+    if (rawData.length < 1) {
+      console.error('No data found in Leave Management sheet');
+      return;
+    }
+
+    const headers = rawData[0].map(h => h?.toString().trim());
+    const dataRows = rawData.length > 1 ? rawData.slice(1) : [];
+    
+    // Get column indices - using more flexible matching
+    const getIndex = (possibleNames) => {
+      for (const name of possibleNames) {
+        const index = headers.findIndex(h => 
+          h && h.toString().trim().toLowerCase().includes(name.toLowerCase())
+        );
+        if (index !== -1) return index;
+      }
+      return -1;
+    };
+
+    const employeeNameIndex = getIndex(['employee name', 'name', 'employee']);
+    const fromDateIndex = getIndex(['Leave Date Start', 'from', 'start date']);
+    const toDateIndex = getIndex(['Leaave Date End', 'to', 'end date']);
+    const remarksIndex = getIndex(['remarks', 'comment', 'reason']);
+    const statusIndex = getIndex(['status', 'approval status']);
+    const leaveTypeIndex = getIndex(['leave type', 'type', 'leave']);
+
+    // Log for debugging
+    console.log('Leave sheet headers:', headers);
+    console.log('Column indices:', {
+      employeeNameIndex,
+      fromDateIndex,
+      toDateIndex,
+      remarksIndex,
+      statusIndex,
+      leaveTypeIndex
+    });
+
+    // Process data and filter for current employee
+    const processedData = dataRows
+      .filter(row => {
+        if (employeeNameIndex === -1) return false;
+        
+        const rowEmployeeName = row[employeeNameIndex]?.toString().trim();
+        return rowEmployeeName && 
+               rowEmployeeName.toLowerCase() === profileData.candidateName?.toLowerCase();
+      })
+      .map(row => ({
+        employeeName: employeeNameIndex !== -1 ? row[employeeNameIndex] || '' : 'N/A',
+        fromDate: fromDateIndex !== -1 ? row[fromDateIndex] || '' : 'N/A',
+        toDate: toDateIndex !== -1 ? row[toDateIndex] || '' : 'N/A',
+        remarks: remarksIndex !== -1 ? row[remarksIndex] || '' : 'N/A',
+        status: statusIndex !== -1 ? row[statusIndex] || '' : 'Pending',
+        leaveType: leaveTypeIndex !== -1 ? row[leaveTypeIndex] || '' : 'N/A'
+      }));
+
+    console.log('Processed leave data:', processedData);
+    setLeaveData(processedData);
+  } catch (error) {
+    console.error('Error fetching leave data:', error);
+  }
+};
+
+
+const fetchGatePassData = async () => {
+  try {
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Gate Pass&action=fetch'
+    );
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    const result = await response.json();
+    if (!result.success) throw new Error(result.error || 'Failed to fetch Gate Pass sheet');
+
+    const rawData = result.data || result;
+    if (!Array.isArray(rawData)) throw new Error('Expected array data not received');
+
+    const headers = rawData[0].map(h => h?.toString().trim());
+    const dataRows = rawData.slice(1);
+    
+    const getIndex = (col) => headers.findIndex(h => h && h.toLowerCase().includes(col.toLowerCase()));
+    
+    const empIndex = getIndex('Employee Name');
+    const placeIndex = getIndex('Place and reason to visit');
+    const departureIndex = getIndex('Departure From Plant');
+    const arrivalIndex = getIndex('Arrival at Plant');
+    const statusIndex = getIndex('Status');
+
+    const processedData = dataRows
+    .filter(row => row[empIndex]?.toString().trim().toLowerCase() === profileData.candidateName?.toLowerCase())
+      .map(row => ({
+        employeeName: row[empIndex] || '',
+        place: row[placeIndex] || '',
+        departure: row[departureIndex] || '',
+        arrival: row[arrivalIndex] || '',
+        status: row[statusIndex] || ''
+      }));
+      
+      setGatePassData(processedData);
+    } catch (error) {
+      console.error('Error fetching gate pass data:', error);
+  }
+};
+
+useEffect(() => {
+  if (profileData && profileData.candidateName) {
+    fetchLeaveData();
+    fetchGatePassData(); 
+  }
+}, [profileData]);
+
+
   const fetchJoiningData = async () => {
     try {
-      // Get user data from localStorage
       const userData = localStorage.getItem('user');
       if (!userData) {
         throw new Error('No user data found in localStorage');
@@ -63,7 +200,6 @@ const MyProfile = () => {
       const currentUser = JSON.parse(userData);
       const userName = currentUser.Name;
 
-      // Fetch data from the sheet API
       const response = await fetch(
         'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=JOINING&action=fetch'
       );
@@ -424,7 +560,10 @@ const MyProfile = () => {
                     console.log("Image failed to load:", e.target.src);
                     // First try the original URL directly
                     if (e.target.src !== profileData.candidatePhoto) {
-                      console.log("Trying original URL:", profileData.candidatePhoto);
+                      console.log(
+                        "Trying original URL:",
+                        profileData.candidatePhoto
+                      );
                       e.target.src = profileData.candidatePhoto;
                     } else {
                       // If that also fails, show user icon
@@ -456,7 +595,9 @@ const MyProfile = () => {
 
         {/* Personal Information */}
         <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border p-6">
-          <h3 className="text-lg font-bold text-gray-800 mb-6">Personal Information</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-6">
+            Personal Information
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* First Column */}
             <div className="space-y-6">
@@ -465,9 +606,11 @@ const MyProfile = () => {
                   <User size={16} className="inline mr-2" />
                   Full Name
                 </label>
-                <p className="text-gray-800 font-medium">{profileData.candidateName}</p>
+                <p className="text-gray-800 font-medium">
+                  {profileData.candidateName}
+                </p>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Building size={16} className="inline mr-2" />
@@ -493,7 +636,9 @@ const MyProfile = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Gender
+                </label>
                 <p className="text-gray-800">{profileData.gender}</p>
               </div>
             </div>
@@ -501,7 +646,9 @@ const MyProfile = () => {
             {/* Second Column */}
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Father's Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Father's Name
+                </label>
                 <p className="text-gray-800">{profileData.fatherName}</p>
               </div>
 
@@ -522,7 +669,7 @@ const MyProfile = () => {
                   <input
                     type="email"
                     name="email"
-                    value={formData.email || ''}
+                    value={formData.email || ""}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
@@ -540,7 +687,7 @@ const MyProfile = () => {
                   <input
                     type="tel"
                     name="mobileNo"
-                    value={formData.mobileNo || ''}
+                    value={formData.mobileNo || ""}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
@@ -550,12 +697,14 @@ const MyProfile = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Emergency Contact</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Emergency Contact
+                </label>
                 {isEditing ? (
                   <input
                     type="tel"
                     name="familyMobileNo"
-                    value={formData.familyMobileNo || ''}
+                    value={formData.familyMobileNo || ""}
                     onChange={handleInputChange}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
@@ -565,7 +714,7 @@ const MyProfile = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Current Address - Full width below the two columns */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -575,15 +724,146 @@ const MyProfile = () => {
             {isEditing ? (
               <textarea
                 name="currentAddress"
-                value={formData.currentAddress || ''}
+                value={formData.currentAddress || ""}
                 onChange={handleInputChange}
                 rows={3}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             ) : (
-              <p className="text-gray-800 whitespace-pre-line">{profileData.currentAddress}</p>
+              <p className="text-gray-800 whitespace-pre-line">
+                {profileData.currentAddress}
+              </p>
             )}
           </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Leave History Card */}
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-6">
+            Leave History
+          </h3>
+          {leaveData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Leave Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      From Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      To Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Remarks
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {leaveData.map((leave, index) => (
+                    <tr key={index}>
+                      <td className="px-6 py-4 text-sm text-gray-800">
+                        {leave.leaveType}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-800">
+                        {leave.fromDate}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-800">
+                        {leave.toDate}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            leave.status.toLowerCase() === "approved"
+                              ? "bg-green-100 text-green-800"
+                              : leave.status.toLowerCase() === "rejected"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {leave.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-800">
+                        {leave.remarks}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-600 text-center py-4">
+              No leave records found
+            </p>
+          )}
+        </div>
+
+        {/* Gate Pass Card */}
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-6">
+            Gate Pass History
+          </h3>
+          {gatePassData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Place & Reason
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Departure
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Arrival
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {gatePassData.map((gp, index) => (
+                    <tr key={index}>
+                      <td className="px-6 py-4 text-sm text-gray-800">
+                        {gp.place}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-800">
+                        {gp.departure}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-800">
+                        {gp.arrival}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            gp.status.toLowerCase() === "approved"
+                              ? "bg-green-100 text-green-800"
+                              : gp.status.toLowerCase() === "rejected"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {gp.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-600 text-center py-4">
+              No gate pass records found
+            </p>
+          )}
         </div>
       </div>
     </div>
