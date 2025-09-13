@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Users, Clock, CheckCircle, Eye, X, Download, Upload } from 'lucide-react';
+import { Search, Users, Clock, CheckCircle, Eye, X, Download, Upload, Share } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Joining = () => {
@@ -14,6 +14,13 @@ const Joining = () => {
   const [error, setError] = useState(null);
   const [followUpData, setFollowUpData] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+const [shareFormData, setShareFormData] = useState({
+  recipientName: '',
+  recipientEmail: '',
+  subject: 'Candidate Joining Details',
+  message: 'Please find the candidate joining details attached below.',
+});
   const [formData, setFormData] = useState({
     candidateSays: '',
     status: '',
@@ -62,6 +69,223 @@ const Joining = () => {
     equipment: ''
   });
 
+  function handleEmailShare(params) {
+  try {
+    console.log("Handling email share with params:", JSON.stringify({
+      recipientEmail: params.recipientEmail,
+      subject: params.subject,
+      message: params.message ? params.message.substring(0, 100) + "..." : "empty",
+      hasDocuments: !!params.documents
+    }));
+    
+    // Validate required parameters
+    if (!params.recipientEmail || !params.subject || !params.message) {
+      throw new Error("Missing required email parameters: recipientEmail, subject, or message");
+    }
+    
+    // Parse documents if provided
+    var documents = [];
+    if (params.documents) {
+      try {
+        documents = JSON.parse(params.documents);
+      } catch (e) {
+        console.warn("Failed to parse documents:", e);
+      }
+    }
+    
+    // Prepare email content with HTML formatting
+    var emailSubject = params.subject;
+    var htmlBody = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <p>${params.message.replace(/\n/g, '<br>')}</p>
+    `;
+    
+    // Add document details to email body if available
+    if (documents.length > 0) {
+      htmlBody += `
+        <h3 style="color: #333; border-bottom: 2px solid #4f46e5; padding-bottom: 5px;">
+          Candidate Details:
+        </h3>
+        <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
+      `;
+      
+      for (var i = 0; i < documents.length; i++) {
+        var doc = documents[i];
+        htmlBody += `
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;">Candidate Name:</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${doc.name || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;">Enquiry No:</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${doc.serialNo || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;">Position:</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${doc.documentType || 'N/A'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;">Department:</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">${doc.category || 'N/A'}</td>
+          </tr>
+        `;
+        
+        if (doc.imageUrl) {
+          htmlBody += `
+            <tr>
+              <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;">Photo:</td>
+              <td style="padding: 8px; border: 1px solid #ddd;">
+                <a href="${doc.imageUrl}" style="color: #4f46e5; text-decoration: none;">View Photo</a>
+              </td>
+            </tr>
+          `;
+        }
+        
+        htmlBody += `<tr><td colspan="2" style="padding: 10px; background-color: #f0f0f0;"></td></tr>`;
+      }
+      
+      htmlBody += `</table>`;
+    }
+    
+    // Add fixed Google.com link
+    htmlBody += `
+      <h3 style="color: #333; border-bottom: 2px solid #4f46e5; padding-bottom: 5px;">
+        Useful Links:
+      </h3>
+      <ul style="list-style: none; padding: 0;">
+        <li style="margin: 5px 0;">
+          <a href="https://www.google.com" style="color: #4f46e5; text-decoration: none;">🔗 Google.com</a>
+        </li>
+      </ul>
+      
+      <p style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #ddd; color: #666;">
+        This email was sent via Joining Management System.
+      </p>
+      </div>
+    `;
+    
+    // Plain text version for email clients that don't support HTML
+    var plainBody = params.message + "\n\n";
+    if (documents.length > 0) {
+      plainBody += "Candidate Details:\n";
+      plainBody += "==================\n\n";
+      for (var i = 0; i < documents.length; i++) {
+        var doc = documents[i];
+        plainBody += `Candidate Name: ${doc.name || 'N/A'}\n`;
+        plainBody += `Enquiry No: ${doc.serialNo || 'N/A'}\n`;
+        plainBody += `Position: ${doc.documentType || 'N/A'}\n`;
+        plainBody += `Department: ${doc.category || 'N/A'}\n`;
+        if (doc.imageUrl) {
+          plainBody += `Photo: ${doc.imageUrl}\n`;
+        }
+        plainBody += "\n";
+      }
+    }
+    plainBody += "\nUseful Links:\n";
+    plainBody += "=============\n";
+    plainBody += "Google.com: https://www.google.com\n\n";
+    plainBody += "This email was sent via Joining Management System.";
+    
+    // Send the email
+    MailApp.sendEmail({
+      to: params.recipientEmail,
+      subject: emailSubject,
+      body: plainBody,
+      htmlBody: htmlBody
+    });
+    
+    console.log("Email sent successfully to:", params.recipientEmail);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: "Email sent successfully to " + params.recipientEmail
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (error) {
+    console.error("Error sending email:", error);
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: "Failed to send email: " + error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+const handleShareClick = (item) => {
+  setSelectedItem(item);
+  // Create the share link with enquiry number
+  const shareLink = `https://hr-joining-form.vercel.app/?enquiry=${item.candidateEnquiryNo || ''}`;
+  
+  setShareFormData({
+    recipientName: item.candidateName || '', // Auto-fill from Column E
+    recipientEmail: item.candidateEmail || '', // Auto-fill from Column H
+    subject: 'Candidate Joining Details - ' + item.candidateName,
+    message: `Dear Recipient,\n\nPlease find the joining details for candidate ${item.candidateName} who is applying for the position of ${item.applyingForPost}.\n\nCandidate Details:\n- Name: ${item.candidateName}\n- Position: ${item.applyingForPost}\n- Department: ${item.department}\n- Phone: ${item.candidatePhone}\n- Email: ${item.candidateEmail}\n- Candidate Enquiry Number: ${item.candidateEnquiryNo}\n\nJoining Form Link: ${shareLink}\n\nBest regards,\nHR Team`,
+  });
+  
+  // Log the share link to console
+  console.log("Share Link:", shareLink);
+  
+  setShowShareModal(true);
+};
+
+const handleShareSubmit = async (e) => {
+  e.preventDefault();
+  setSubmitting(true);
+  
+  try {
+    const documents = [{
+      name: selectedItem.candidateName,
+      serialNo: selectedItem.candidateEnquiryNo,
+      documentType: selectedItem.applyingForPost,
+      category: selectedItem.department,
+      imageUrl: selectedItem.candidatePhoto || ''
+    }];
+    
+    const URL = 'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec';
+    
+    const params = new URLSearchParams();
+    params.append('action', 'shareViaEmail');
+    params.append('recipientEmail', shareFormData.recipientEmail);
+    params.append('subject', shareFormData.subject);
+    params.append('message', shareFormData.message);
+    params.append('documents', JSON.stringify(documents));
+    
+    const response = await fetch(URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params,
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to send email');
+    }
+    
+    toast.success('Details shared successfully!');
+    setShowShareModal(false);
+  } catch (error) {
+    console.error('Error sharing details:', error);
+    toast.error(`Failed to share details: ${error.message}`);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+const handleShareInputChange = (e) => {
+  const { name, value } = e.target;
+  setShareFormData(prev => ({
+    ...prev,
+    [name]: value
+  }));
+};
+
 const fetchJoiningData = async () => {
   setLoading(true);
   setTableLoading(true);
@@ -106,6 +330,7 @@ const fetchJoiningData = async () => {
     const getIndex = (headerName) =>
       enquiryHeaders.findIndex((h) => h === headerName);
 
+    const departmentIndex = getIndex("Department");
      const abIndex = 27; // Column AB index (0-based index 27)
 
     const processedEnquiryData = enquiryDataFromRow7
@@ -114,6 +339,7 @@ const fetchJoiningData = async () => {
         indentNo: row[getIndex("Indent Number")],
         candidateEnquiryNo: row[getIndex("Candidate Enquiry Number")],
         applyingForPost: row[getIndex("Applying For the Post")],
+         department: row[departmentIndex] || "",
         candidateName: row[getIndex("Candidate Name")],
         candidateDOB: row[getIndex("DOB")],
         candidatePhone: row[getIndex("Candidate Phone Number")],
@@ -227,7 +453,7 @@ const fetchJoiningData = async () => {
       paymentMode: '',
       salarySlip: null,
       resumeCopy: null,
-      department: '',
+      department: item.department || '',
       equipment: ''
     });
     setShowJoiningModal(true);
@@ -496,7 +722,7 @@ const handleJoiningSubmit = async (e) => {
     rowData[17] = fileUrls.bankPassbookPhoto;  // Column R: Photo Of Front Bank Passbook
     rowData[18] = selectedItem.candidateEmail; // Column S: Candidate Email
     rowData[19] = joiningFormData.highestQualification; // Column T: Highest Qualification
-    rowData[20] = joiningFormData.department;  // Column U: Department
+    rowData[20] = selectedItem.department || '';  // Column U: Department
     rowData[21] = joiningFormData.equipment;   // Column V: Equipment
     rowData[22] = selectedItem.aadharNo;       // Column W: Aadhar Number
     rowData[23] = selectedItem.candidateResume; // Column X: Candidate Resume (same as T)
@@ -594,6 +820,9 @@ const handleJoiningSubmit = async (e) => {
                       Applying For Post
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Department
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Candidate Name
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -656,6 +885,13 @@ const handleJoiningSubmit = async (e) => {
                             >
                               Joining
                             </button>
+                            <button
+                              onClick={() => handleShareClick(item)}
+                              className="px-3 py-1 text-white bg-blue-600 rounded-md hover:bg-opacity-90 text-sm flex items-center"
+                            >
+                              <Share size={14} className="mr-1" />
+                              Share
+                            </button>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -666,6 +902,9 @@ const handleJoiningSubmit = async (e) => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.applyingForPost || "-"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.department || "-"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.candidateName || "-"}
@@ -803,23 +1042,14 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Department *
+                    Department
                   </label>
-                  <select
-                    name="department"
-                    value={joiningFormData.department}
-                    onChange={handleJoiningInputChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-                    required
-                  >
-                    <option value="">Select Department</option>
-                    <option value="Dispatch">Dispatch</option>
-                    <option value="Office">Office</option>
-                    <option value="Sales">Sales</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Sms">Sms</option>
-                    <option value="Store">Store</option>
-                  </select>
+                  <input
+                    type="text"
+                    disabled
+                    value={selectedItem.department || ""} // Use selectedItem.department instead of joiningFormData.department
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-700"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -850,7 +1080,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Pre Email *
+                    Personal Email *
                   </label>
                   <input
                     type="email"
@@ -1088,6 +1318,144 @@ const handleJoiningSubmit = async (e) => {
           </div>
         </div>
       )}
+
+      {showShareModal && selectedItem && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+      <div className="flex justify-between items-center p-6 border-b border-gray-300">
+        <h3 className="text-lg font-medium text-gray-900">
+          Share Candidate Details
+        </h3>
+        <button
+          onClick={() => setShowShareModal(false)}
+          className="text-gray-500 hover:text-gray-700"
+        >
+          <X size={20} />
+        </button>
+      </div>
+      <form onSubmit={handleShareSubmit} className="p-6 space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Recipient Name *
+          </label>
+          <input
+            type="text"
+            name="recipientName"
+            value={shareFormData.recipientName}
+            onChange={handleShareInputChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Email Address *
+          </label>
+          <input
+            type="email"
+            name="recipientEmail"
+            value={shareFormData.recipientEmail}
+            onChange={handleShareInputChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Subject *
+          </label>
+          <input
+            type="text"
+            name="subject"
+            value={shareFormData.subject}
+            onChange={handleShareInputChange}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Message *
+          </label>
+          <textarea
+            name="message"
+            value={shareFormData.message}
+            onChange={handleShareInputChange}
+            rows={5}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
+            required
+          />
+        </div>
+        
+        <div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Attached Links
+  </label>
+  <div className="text-sm text-gray-600 space-y-1">
+    <div className="flex items-center">
+      <a 
+        href="https://hr-joining-form.vercel.app/" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="text-indigo-600 hover:text-indigo-800"
+      >
+        Joining Form Link
+      </a>
+    </div>
+  </div>
+</div>
+        
+        <div className="flex justify-end space-x-2 pt-4">
+          <button
+            type="button"
+            onClick={() => setShowShareModal(false)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className={`px-4 py-2 text-white bg-indigo-700 rounded-md hover:bg-indigo-800 flex items-center justify-center min-h-[42px] ${
+              submitting ? "opacity-90 cursor-not-allowed" : ""
+            }`}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <>
+                <svg
+                  className="animate-spin h-4 w-4 text-white mr-2"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Sending...
+              </>
+            ) : (
+              "Send Email"
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
     </div>
   );
 };

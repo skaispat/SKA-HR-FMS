@@ -500,7 +500,7 @@ const handleSubmit = async (e) => {
         <tr>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+          {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th> */}
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Place and reason to visit</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departure From Plant</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Arrival at Plant</th>
@@ -516,7 +516,7 @@ const handleSubmit = async (e) => {
             <tr key={index} className="hover:bg-white">
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeId}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeName}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.department}</td>
+              {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.department}</td> */}
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 <div>
                   <div className="font-medium">{item.visitPlace}</div>
@@ -551,7 +551,7 @@ const handleSubmit = async (e) => {
         <tr>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+          {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th> */}
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Place and reason to visit</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departure From Plant</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Arrival at Plant</th>
@@ -567,7 +567,7 @@ const handleSubmit = async (e) => {
             <tr key={index} className="hover:bg-white">
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeId}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeName}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.department}</td>
+              {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.department}</td> */}
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 <div>
                   <div className="font-medium">{item.visitPlace}</div>
@@ -602,7 +602,7 @@ const handleSubmit = async (e) => {
         <tr>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee Name</th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+          {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th> */}
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Place and reason to visit</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departure From Plant</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Arrival at Plant</th>
@@ -618,7 +618,7 @@ const handleSubmit = async (e) => {
             <tr key={index} className="hover:bg-white">
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeId}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.employeeName}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.department}</td>
+              {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.department}</td> */}
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 <div>
                   <div className="font-medium">{item.visitPlace}</div>
@@ -804,7 +804,7 @@ return (
                 />
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Department
                 </label>
@@ -815,7 +815,7 @@ return (
                   className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 focus:outline-none"
                   readOnly
                 />
-              </div>
+              </div> */}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

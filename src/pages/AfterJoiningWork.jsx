@@ -15,29 +15,28 @@ const AfterJoiningWork = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
-  const [formData, setFormData] = useState({
-    checkSalarySlipResume: false,
-    offerLetterReceived: false,
-    welcomeMeeting: false,
-    biometricAccess: false,
-    officialEmailId: false,
-    emailId: "",
-    emailPassword: "",
-    assignAssets: false,
-    laptopImage: null,
-    laptopImageUrl: "",
-    mobileImage: null,
-    mobileImageUrl: "",
-    vehicleImage: null,
-    vehicleImageUrl: "",
-    otherImage: null,
-    otherImageUrl: "",
-    pfEsic: false,
-    companyDirectory: false,
-    manualImage: null,
-    manualImageUrl: "",
-    assets: [],
-  });
+const [formData, setFormData] = useState({
+  checkSalarySlipResume: false,
+  offerLetterReceived: false,
+  welcomeMeeting: false,
+  biometricAccess: false,
+  punchCode: "", // Add punch code field
+  officialEmailId: false,
+  emailId: "",
+  emailPassword: "",
+  assignAssets: false,
+  // Remove image upload fields and replace with input fields
+  laptop: "",
+  mobile: "",
+  vehicle: "",
+  other: "",
+  // Keep these for manual image upload
+  manualImage: null,
+  manualImageUrl: "",
+  pfEsic: false,
+  companyDirectory: false,
+  assets: [],
+});
 
   // Google Drive folder ID for storing images
   const DRIVE_FOLDER_ID = "1Am4QdBpwOGyIawpmlxxVGy1Gv2sAOARU";
@@ -149,52 +148,53 @@ const AfterJoiningWork = () => {
   };
 
   // Fetch previous assets data from Assets sheet
-  const fetchAssetsData = async (employeeId) => {
-    try {
-      const response = await fetch(
-        "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Assets&action=fetch"
-      );
+const fetchAssetsData = async (employeeId) => {
+  try {
+    const response = await fetch(
+      "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Assets&action=fetch"
+    );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-      const result = await response.json();
-      
-      if (!result.success) {
-        // If Assets sheet doesn't exist or no data, return empty
-        return null;
-      }
-
-      const data = result.data || result;
-      if (!Array.isArray(data) || data.length < 2) {
-        return null;
-      }
-
-      // Find the row with matching employee ID (column B, index 1)
-      const matchingRow = data.find((row, index) => {
-        if (index === 0) return false; // Skip header row
-        return row[1]?.toString().trim() === employeeId?.toString().trim();
-      });
-
-      if (matchingRow) {
-        return {
-          emailId: matchingRow[3] || "",
-          emailPassword: matchingRow[4] || "",
-          laptopImageUrl: matchingRow[5] || "",
-          mobileImageUrl: matchingRow[6] || "",
-          vehicleImageUrl: matchingRow[7] || "",
-          otherImageUrl: matchingRow[8] || "",
-          manualImageUrl: matchingRow[9] || ""
-        };
-      }
-
-      return null;
-    } catch (error) {
-      console.error("Error fetching assets data:", error);
+    const result = await response.json();
+    
+    if (!result.success) {
       return null;
     }
-  };
+
+    const data = result.data || result;
+    if (!Array.isArray(data) || data.length < 2) {
+      return null;
+    }
+
+    // Find the row with matching employee ID (column B, index 1)
+    const matchingRow = data.find((row, index) => {
+      if (index === 0) return false; // Skip header row
+      return row[1]?.toString().trim() === employeeId?.toString().trim();
+    });
+
+    if (matchingRow) {
+      return {
+        punchCode: matchingRow[10] || "", // Column K (index 10)
+        emailId: matchingRow[3] || "",
+        emailPassword: matchingRow[4] || "",
+        laptop: matchingRow[5] || "",
+        mobile: matchingRow[6] || "",
+        vehicle: matchingRow[7] || "",
+        other: matchingRow[8] || "",
+        manualImageUrl: matchingRow[9] || ""
+      };
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error fetching assets data:", error);
+    return null;
+  }
+};
+
 
   // Upload image to Google Drive
   const uploadImageToDrive = async (file, fileName) => {
@@ -244,30 +244,27 @@ const AfterJoiningWork = () => {
   }, []);
 
 const handleAfterJoiningClick = async (item) => {
-    // Reset form data first
-    setFormData({
-      checkSalarySlipResume: false,
-      offerLetterReceived: false,
-      welcomeMeeting: false,
-      biometricAccess: false,
-      officialEmailId: false,
-      emailId: "",
-      emailPassword: "",
-      assignAssets: false,
-      laptopImage: null,
-      laptopImageUrl: "",
-      mobileImage: null,
-      mobileImageUrl: "",
-      vehicleImage: null,
-      vehicleImageUrl: "",
-      otherImage: null,
-      otherImageUrl: "",
-      pfEsic: false,
-      companyDirectory: false,
-      manualImage: null,
-      manualImageUrl: "",
-      assets: [],
-    });
+  // Reset form data first
+  setFormData({
+    checkSalarySlipResume: false,
+    offerLetterReceived: false,
+    welcomeMeeting: false,
+    biometricAccess: false,
+    punchCode: "", // Initialize punch code
+    officialEmailId: false,
+    emailId: "",
+    emailPassword: "",
+    assignAssets: false,
+    laptop: "",
+    mobile: "",
+    vehicle: "",
+    other: "",
+    manualImage: null,
+    manualImageUrl: "",
+    pfEsic: false,
+    companyDirectory: false,
+    assets: [],
+  });
     
     setSelectedItem(item);
     setShowModal(true);
@@ -320,71 +317,68 @@ const handleAfterJoiningClick = async (item) => {
       const actualColumnIndex = 27; // Column AB (0-based index: 27)
       const startColumnIndex = 29; // Column AD (0-based index: 29)
 
-      const currentValues = {
-        checkSalarySlipResume:
-          allData[rowIndex][startColumnIndex] // Column AD
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        offerLetterReceived:
-          allData[rowIndex][startColumnIndex + 1] // Column AE
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        welcomeMeeting:
-          allData[rowIndex][startColumnIndex + 2] // Column AF
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        biometricAccess:
-          allData[rowIndex][startColumnIndex + 3] // Column AG
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        officialEmailId:
-          allData[rowIndex][startColumnIndex + 4] // Column AH
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        assignAssets:
-          allData[rowIndex][startColumnIndex + 5] // Column AI
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        pfEsic:
-          allData[rowIndex][startColumnIndex + 6] // Column AJ
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-        companyDirectory:
-          allData[rowIndex][startColumnIndex + 7] // Column AK
-            ?.toString()
-            .trim()
-            .toLowerCase() === "yes",
-      };
+const currentValues = {
+    checkSalarySlipResume:
+      allData[rowIndex][startColumnIndex] // Column AD
+        ?.toString()
+        .trim()
+        .toLowerCase() === "yes",
+    offerLetterReceived:
+      allData[rowIndex][startColumnIndex + 1] // Column AE
+        ?.toString()
+        .trim()
+        .toLowerCase() === "yes",
+    welcomeMeeting:
+      allData[rowIndex][startColumnIndex + 2] // Column AF
+        ?.toString()
+        .trim()
+        .toLowerCase() === "yes",
+    biometricAccess:
+      allData[rowIndex][startColumnIndex + 3] // Column AG
+        ?.toString()
+        .trim()
+        .toLowerCase() === "yes",
+    officialEmailId:
+      allData[rowIndex][startColumnIndex + 4] // Column AH
+        ?.toString()
+        .trim()
+        .toLowerCase() === "yes",
+    assignAssets:
+      allData[rowIndex][startColumnIndex + 5] // Column AI
+        ?.toString()
+        .trim()
+        .toLowerCase() === "yes",
+    pfEsic:
+      allData[rowIndex][startColumnIndex + 6] // Column AJ
+        ?.toString()
+        .trim()
+        .toLowerCase() === "yes",
+    companyDirectory:
+      allData[rowIndex][startColumnIndex + 7] // Column AK
+        ?.toString()
+        .trim()
+        .toLowerCase() === "yes",
+  };
 
       // Merge with assets data if available
-      const finalFormData = {
-        ...currentValues,
-        emailId: assetsData?.emailId || "",
-        emailPassword: assetsData?.emailPassword || "",
-        laptopImageUrl: assetsData?.laptopImageUrl || "",
-        mobileImageUrl: assetsData?.mobileImageUrl || "",
-        vehicleImageUrl: assetsData?.vehicleImageUrl || "",
-        otherImageUrl: assetsData?.otherImageUrl || "",
-        manualImageUrl: assetsData?.manualImageUrl || "",
-        laptopImage: null,
-        mobileImage: null,
-        vehicleImage: null,
-        otherImage: null,
-        manualImage: null,
-        assets: [],
-      };
+  const finalFormData = {
+    ...currentValues,
+    punchCode: assetsData?.punchCode || "", // Add punch code
+    emailId: assetsData?.emailId || "",
+    emailPassword: assetsData?.emailPassword || "",
+    laptop: assetsData?.laptop || "",
+    mobile: assetsData?.mobile || "",
+    vehicle: assetsData?.vehicle || "",
+    other: assetsData?.other || "",
+    manualImageUrl: assetsData?.manualImageUrl || "",
+    manualImage: null,
+    assets: [],
+  };
 
-      setFormData(prev => ({
-        ...prev,
-        ...finalFormData
-      }));
+  setFormData(prev => ({
+    ...prev,
+    ...finalFormData
+  }));
 
     } catch (error) {
       console.error("Error fetching current values:", error);
@@ -421,23 +415,24 @@ const handleAfterJoiningClick = async (item) => {
   };
 
   // Save assets data to Assets sheet
-  const saveAssetsData = async (employeeId, employeeName, assetsData) => {
-    try {
-      const now = new Date();
-      const timestamp = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-      
-      const rowData = [
-        timestamp,
-        employeeId,
-        employeeName,
-        assetsData.emailId || "",
-        assetsData.emailPassword || "",
-        assetsData.laptopImageUrl || "",
-        assetsData.mobileImageUrl || "",
-        assetsData.vehicleImageUrl || "",
-        assetsData.otherImageUrl || "",
-        assetsData.manualImageUrl || ""
-      ];
+const saveAssetsData = async (employeeId, employeeName, assetsData) => {
+  try {
+    const now = new Date();
+    const timestamp = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+    
+    const rowData = [
+      timestamp,
+      employeeId,
+      employeeName,
+      assetsData.emailId || "",
+      assetsData.emailPassword || "",
+      assetsData.laptop || "", // Changed from image URL to text input
+      assetsData.mobile || "", // Changed from image URL to text input
+      assetsData.vehicle || "", // Changed from image URL to text input
+      assetsData.other || "", // Changed from image URL to text input
+      assetsData.manualImageUrl || "",
+      assetsData.punchCode || "" // Add punch code to column K
+    ];
 
       // First, check if record exists
       const existingData = await fetchAssetsData(employeeId);
@@ -511,67 +506,11 @@ const handleSubmit = async (e) => {
   }
 
   try {
-    // Upload new images first
-    const uploadedUrls = {
-      laptopImageUrl: formData.laptopImageUrl,
-      mobileImageUrl: formData.mobileImageUrl,
-      vehicleImageUrl: formData.vehicleImageUrl,
-      otherImageUrl: formData.otherImageUrl,
-      manualImageUrl: formData.manualImageUrl,
-    };
-
-    // Upload laptop image if new file selected
-    if (formData.laptopImage) {
-      try {
-        uploadedUrls.laptopImageUrl = await uploadImageToDrive(
-          formData.laptopImage,
-          `${selectedItem.joiningNo}_laptop_${Date.now()}.${formData.laptopImage.name.split('.').pop()}`
-        );
-      } catch (error) {
-        toast.error(`Failed to upload laptop image: ${error.message}`);
-      }
-    }
-
-    // Upload mobile image if new file selected
-    if (formData.mobileImage) {
-      try {
-        uploadedUrls.mobileImageUrl = await uploadImageToDrive(
-          formData.mobileImage,
-          `${selectedItem.joiningNo}_mobile_${Date.now()}.${formData.mobileImage.name.split('.').pop()}`
-        );
-      } catch (error) {
-        toast.error(`Failed to upload mobile image: ${error.message}`);
-      }
-    }
-
-    // Upload vehicle image if new file selected
-    if (formData.vehicleImage) {
-      try {
-        uploadedUrls.vehicleImageUrl = await uploadImageToDrive(
-          formData.vehicleImage,
-          `${selectedItem.joiningNo}_vehicle_${Date.now()}.${formData.vehicleImage.name.split('.').pop()}`
-        );
-      } catch (error) {
-        toast.error(`Failed to upload vehicle image: ${error.message}`);
-      }
-    }
-
-    // Upload other image if new file selected
-    if (formData.otherImage) {
-      try {
-        uploadedUrls.otherImageUrl = await uploadImageToDrive(
-          formData.otherImage,
-          `${selectedItem.joiningNo}_other_${Date.now()}.${formData.otherImage.name.split('.').pop()}`
-        );
-      } catch (error) {
-        toast.error(`Failed to upload other image: ${error.message}`);
-      }
-    }
-
-    // Upload manual image if new file selected
+    // Upload manual image if new file selected (only for company directory)
+    let manualImageUrl = formData.manualImageUrl;
     if (formData.manualImage) {
       try {
-        uploadedUrls.manualImageUrl = await uploadImageToDrive(
+        manualImageUrl = await uploadImageToDrive(
           formData.manualImage,
           `${selectedItem.joiningNo}_manual_${Date.now()}.${formData.manualImage.name.split('.').pop()}`
         );
@@ -580,11 +519,16 @@ const handleSubmit = async (e) => {
       }
     }
 
-    // Save assets data
+    // Save assets data (now with text inputs instead of images)
     await saveAssetsData(selectedItem.joiningNo, selectedItem.candidateName, {
       emailId: formData.emailId,
       emailPassword: formData.emailPassword,
-      ...uploadedUrls
+      laptop: formData.laptop,
+      mobile: formData.mobile,
+      vehicle: formData.vehicle,
+      other: formData.other,
+      manualImageUrl: manualImageUrl,
+      punchCode: formData.punchCode // Include punch code
     });
 
     // Continue with existing logic for updating JOINING sheet
@@ -1007,7 +951,10 @@ const formatDOB = (dateString) => {
                 <X size={20} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+            <form
+              onSubmit={handleSubmit}
+              className="p-6 space-y-4 max-h-[80vh] overflow-y-auto"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
@@ -1037,7 +984,6 @@ const formatDOB = (dateString) => {
                 <h4 className="text-md font-medium text-gray-500">
                   Checklist Items
                 </h4>
-
                 {[
                   {
                     key: "checkSalarySlipResume",
@@ -1066,7 +1012,25 @@ const formatDOB = (dateString) => {
                     </label>
                   </div>
                 ))}
-
+                {formData.biometricAccess && (
+                  <div className="mt-2 ml-6 p-3 bg-gray-50 rounded-md">
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                          Punch Code
+                        </label>
+                        <input
+                          type="text"
+                          name="punchCode"
+                          value={formData.punchCode}
+                          onChange={handleInputChange}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          placeholder="Enter punch code"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {/* Official Email ID Section */}
                 <div className="space-y-3">
                   <div className="flex items-center">
@@ -1084,7 +1048,7 @@ const formatDOB = (dateString) => {
                       Official Email ID
                     </label>
                   </div>
-                  
+
                   {formData.officialEmailId && (
                     <div className="mt-2 ml-6 grid grid-cols-1 md:grid-cols-2 gap-3 p-3 bg-gray-50 rounded-md">
                       <div>
@@ -1116,88 +1080,45 @@ const formatDOB = (dateString) => {
                     </div>
                   )}
                 </div>
-
-                {/* Assign Assets Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="assignAssets"
-                      checked={formData.assignAssets}
-                      onChange={() => handleCheckboxChange("assignAssets")}
-                      className="h-4 w-4 text-gray-500 focus:ring-blue-500 border-gray-300 rounded bg-white"
-                    />
-                    <label
-                      htmlFor="assignAssets"
-                      className="ml-2 text-sm text-gray-500"
-                    >
-                      Assign Assets
-                    </label>
-                  </div>
-                  
-                  {formData.assignAssets && (
-                    <div className="mt-2 ml-6 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-gray-50 rounded-md">
-                      {[
-                        { id: "laptopImage", label: "Laptop", urlKey: "laptopImageUrl" },
-                        { id: "mobileImage", label: "Mobile", urlKey: "mobileImageUrl" },
-                        { id: "vehicleImage", label: "Vehicle", urlKey: "vehicleImageUrl" },
-                        { id: "otherImage", label: "Other", urlKey: "otherImageUrl" },
-                      ].map((asset) => (
-                        <div key={asset.id} className="space-y-2">
-                          <label className="block text-sm font-medium text-gray-500">
-                            {asset.label}
-                          </label>
-                          <div className="space-y-2">
-                            <div className="flex items-center">
-                              <input
-                                type="file"
-                                id={asset.id}
-                                accept="image/*"
-                                onChange={(e) => handleImageUpload(e, asset.id)}
-                                className="hidden"
-                              />
-                              <label
-                                htmlFor={asset.id}
-                                className="cursor-pointer bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 flex items-center"
-                              >
-                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
-                                {formData[asset.id] ? 'Change' : (formData[asset.urlKey] ? 'Replace' : 'Upload')}
-                              </label>
-                            </div>
-                            {/* Show existing image if available */}
-                            {formData[asset.urlKey] && !formData[asset.id] && (
-                              <div className="mt-1">
-                                <img 
-                                  src={formData[asset.urlKey]} 
-                                  alt={`Existing ${asset.label}`} 
-                                  className="h-16 w-16 object-cover rounded border"
-                                  onError={(e) => {
-                                    e.target.style.display = 'none';
-                                  }}
-                                />
-                                <p className="text-xs text-gray-500 mt-1">Current {asset.label} image</p>
-                              </div>
-                            )}
-                            {/* Show new selected image preview */}
-                            {formData[asset.id] && (
-                              <div className="mt-1">
-                                <img 
-                                  src={URL.createObjectURL(formData[asset.id])} 
-                                  alt={`New ${asset.label}`} 
-                                  className="h-16 w-16 object-cover rounded border" 
-                                />
-                                <p className="text-xs text-green-600 mt-1">New {asset.label} image selected</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="assignAssets"
+                    checked={formData.assignAssets}
+                    onChange={() => handleCheckboxChange("assignAssets")}
+                    className="h-4 w-4 text-gray-500 focus:ring-blue-500 border-gray-300 rounded bg-white"
+                  />
+                  <label
+                    htmlFor="assignAssets"
+                    className="ml-2 text-sm text-gray-500"
+                  >
+                    Assign Assets
+                  </label>
                 </div>
-
+                {formData.assignAssets && (
+                  <div className="mt-2 ml-6 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-gray-50 rounded-md">
+                    {[
+                      { id: "laptop", label: "Laptop" },
+                      { id: "mobile", label: "Mobile" },
+                      { id: "vehicle", label: "Vehicle" },
+                      { id: "other", label: "SIM" },
+                    ].map((asset) => (
+                      <div key={asset.id} className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-500">
+                          {asset.label}
+                        </label>
+                        <input
+                          type="text"
+                          name={asset.id}
+                          value={formData[asset.id]}
+                          onChange={handleInputChange}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          placeholder={`Enter ${asset.label} details`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -1213,7 +1134,6 @@ const formatDOB = (dateString) => {
                     PF / ESIC
                   </label>
                 </div>
-
                 {/* Company Directory Section */}
                 <div className="space-y-3">
                   <div className="flex items-center">
@@ -1231,7 +1151,7 @@ const formatDOB = (dateString) => {
                       Company Directory
                     </label>
                   </div>
-                  
+
                   {formData.companyDirectory && (
                     <div className="mt-2 ml-6 p-3 bg-gray-50 rounded-md">
                       <div className="space-y-2">
@@ -1244,42 +1164,63 @@ const formatDOB = (dateString) => {
                               type="file"
                               id="manualImage"
                               accept="image/*"
-                              onChange={(e) => handleImageUpload(e, "manualImage")}
+                              onChange={(e) =>
+                                handleImageUpload(e, "manualImage")
+                              }
                               className="hidden"
                             />
                             <label
                               htmlFor="manualImage"
                               className="cursor-pointer bg-white border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 flex items-center"
                             >
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                              <svg
+                                className="w-4 h-4 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                ></path>
                               </svg>
-                              {formData.manualImage ? 'Change Manual' : (formData.manualImageUrl ? 'Replace Manual' : 'Upload Manual')}
+                              {formData.manualImage
+                                ? "Change Manual"
+                                : formData.manualImageUrl
+                                ? "Replace Manual"
+                                : "Upload Manual"}
                             </label>
                           </div>
                           {/* Show existing manual image if available */}
                           {formData.manualImageUrl && !formData.manualImage && (
                             <div className="mt-2">
-                              <img 
-                                src={formData.manualImageUrl} 
-                                alt="Existing Manual" 
+                              <img
+                                src={formData.manualImageUrl}
+                                alt="Existing Manual"
                                 className="h-32 w-full object-contain rounded border"
                                 onError={(e) => {
-                                  e.target.style.display = 'none';
+                                  e.target.style.display = "none";
                                 }}
                               />
-                              <p className="text-xs text-gray-500 mt-1">Current manual image</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Current manual image
+                              </p>
                             </div>
                           )}
                           {/* Show new selected manual image preview */}
                           {formData.manualImage && (
                             <div className="mt-2">
-                              <img 
-                                src={URL.createObjectURL(formData.manualImage)} 
-                                alt="New Manual" 
-                                className="h-32 w-full object-contain rounded border" 
+                              <img
+                                src={URL.createObjectURL(formData.manualImage)}
+                                alt="New Manual"
+                                className="h-32 w-full object-contain rounded border"
                               />
-                              <p className="text-xs text-green-600 mt-1">New manual image selected</p>
+                              <p className="text-xs text-green-600 mt-1">
+                                New manual image selected
+                              </p>
                             </div>
                           )}
                         </div>

@@ -1,28 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   Cell,
-  LineChart,
-  Line
+  ResponsiveContainer
 } from 'recharts';
-import { 
-  Users, 
-  UserCheck, 
-  UserX, 
+import {
+  Users,
+  UserCheck,
+  UserX,
+  Clock, 
   UserPlus,
-  TrendingUp,
-  Clock,
-  CheckCircle,
-  AlertTriangle
+  TrendingUp
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -33,26 +26,146 @@ const Dashboard = () => {
   const [monthlyHiringData, setMonthlyHiringData] = useState([]);
   const [designationData, setDesignationData] = useState([]);
   const [postRequiredData, setPostRequiredData] = useState([]);
-  
-  // Mock data for other charts
-  const employeeStatusData = [
-    { name: 'Active', value: activeEmployee, color: '#10B981' },
-    { name: 'Resigned', value: leftEmployee, color: '#EF4444' }
-  ];
+  const [leaveAnalyticsData, setLeaveAnalyticsData] = useState([]);
 
-  const performanceData = [
-    { month: 'Jan', productivity: 85, satisfaction: 78 },
-    { month: 'Feb', productivity: 88, satisfaction: 82 },
-    { month: 'Mar', productivity: 92, satisfaction: 85 },
-    { month: 'Apr', productivity: 89, satisfaction: 88 },
-    { month: 'May', productivity: 94, satisfaction: 90 },
-    { month: 'Jun', productivity: 96, satisfaction: 92 }
-  ];
+  // Parse DD/MM/YYYY format date
+  const parseSheetDate = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+    return new Date(year, month, day);
+  };
 
+  // Fetch Leave Management Data for Analytics
+  const fetchLeaveAnalytics = async () => {
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Leave%20Management&action=fetch'
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch data from Leave Management sheet');
+      }
+
+      const rawData = result.data || result;
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
+
+      const headers = rawData[0];
+      const dataRows = rawData.slice(1);
+
+      const statusIndex = headers.findIndex(h => h && h.toString().trim().toLowerCase() === "status");
+      const fromIndex = headers.findIndex(h => h && h.toString().trim().toLowerCase().includes("leave date start"));
+      const toIndex = headers.findIndex(h => h && h.toString().trim().toLowerCase().includes("leaave date en"));
+      const nameIndex = headers.findIndex(h => h && h.toString().trim().toLowerCase().includes("employee name"));
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let todayLeaves = 0;
+      let upcomingLeaves = 0;
+
+      dataRows.forEach(row => {
+        const status = row[statusIndex]?.toString().trim().toLowerCase();
+        if (status !== "approved") return;
+
+        const fromDate = parseSheetDate(row[fromIndex]);
+        const toDate = parseSheetDate(row[toIndex]);
+
+        if (fromDate && toDate) {
+          if (today >= fromDate && today <= toDate) {
+            todayLeaves += 1;
+          } else if (fromDate > today) {
+            upcomingLeaves += 1;
+          }
+        }
+      });
+
+      const analytics = [
+        { type: "Today's Leaves", count: todayLeaves },
+        { type: "Upcoming Leaves", count: upcomingLeaves }
+      ];
+
+      setLeaveAnalyticsData(analytics);
+    } catch (error) {
+      console.error("Error fetching leave analytics:", error);
+      setLeaveAnalyticsData([]);
+    }
+  };
+
+  // Fetch Post Required Data
   const fetchPostRequiredData = async () => {
+    try {
+      const response = await fetch(
+        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=INDENT&action=fetch'
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch data from INDENT sheet');
+      }
+
+      const rawData = result.data || result;
+      if (!Array.isArray(rawData)) {
+        throw new Error('Expected array data not received');
+      }
+
+      const headers = rawData[5];
+      const dataRows = rawData.slice(6);
+
+      const postNameIndex = 2; // Column C
+      const numberOfPostsIndex = 5; // Column F
+      const statusIndex = 8; // Column I
+
+      const needMoreData = dataRows.filter(row =>
+        row[statusIndex]?.toString().trim().toLowerCase() === "need more"
+      );
+
+      const postData = needMoreData.map(row => ({
+        postName: row[postNameIndex]?.toString().trim() || 'Unnamed Post',
+        numberOfPosts: parseInt(row[numberOfPostsIndex]) || 0
+      }));
+
+      setPostRequiredData(postData);
+    } catch (error) {
+      console.error("Error fetching post required data:", error);
+      setPostRequiredData([]);
+    }
+  };
+
+
+// const parseSheetDate = (dateStr) => {
+//   // Expecting format DD/MM/YYYY
+//   const parts = dateStr.split('/');
+//   if (parts.length !== 3) return null;
+
+//   const day = parseInt(parts[0], 10);
+//   const month = parseInt(parts[1], 10) - 1; // Months are 0-indexed
+//   const year = parseInt(parts[2], 10);
+
+//   if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+
+//   return new Date(year, month, day);
+// };
+
+const fetchLeaveData = async () => {
   try {
     const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=INDENT&action=fetch'
+      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=Leave Management&action=fetch'
     );
 
     if (!response.ok) {
@@ -61,7 +174,7 @@ const Dashboard = () => {
 
     const result = await response.json();
     if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch data from INDENT sheet');
+      throw new Error(result.error || 'Failed to fetch data from Leave Management sheet');
     }
 
     const rawData = result.data || result;
@@ -69,51 +182,68 @@ const Dashboard = () => {
       throw new Error('Expected array data not received');
     }
 
-    const headers = rawData[5]; // Row 6 headers
     const dataRows = rawData.slice(6); // Row 7 onwards
 
     // Find column indexes
-    const postNameIndex = 2; // Column C
-    const numberOfPostsIndex = 5; // Column F
-    const statusIndex = 8; // Column I
-
-    // Filter rows with "Need More" in status column (index 8)
-    const needMoreData = dataRows.filter(row => 
-      row[statusIndex]?.toString().trim().toLowerCase() === "need more"
+    const leaveStartIndex = 4; // Column E
+    const leaveEndIndex = 5;   // Column F
+    const statusIndex = 7;     // Column H
+    
+    // Filter only approved leaves
+    const approvedLeaves = dataRows.filter(row => 
+      row[statusIndex]?.toString().trim().toLowerCase() === "approved"
     );
 
-    // Prepare data for the chart
-    const postData = needMoreData.map(row => ({
-      postName: row[postNameIndex]?.toString().trim() || 'Unnamed Post',
-      numberOfPosts: parseInt(row[numberOfPostsIndex]) || 0
-    }));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    console.log("✅ Post Required Data:", postData);
+    let todaysLeavesCount = 0;
+    let upcomingLeavesCount = 0;
 
-    setPostRequiredData(postData);
+    approvedLeaves.forEach(row => {
+      const startDateStr = row[leaveStartIndex];
+      const endDateStr = row[leaveEndIndex];
+      
+      if (!startDateStr || !endDateStr) return;
+      
+      const startDate = parseSheetDate(startDateStr);
+      const endDate = parseSheetDate(endDateStr);
+      
+      if (!startDate || !endDate) return;
+      
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
+
+      // Expand day-by-day between startDate and endDate
+      for (
+        let d = new Date(startDate);
+        d <= endDate;
+        d.setDate(d.getDate() + 1)
+      ) {
+        if (d.getTime() === today.getTime()) {
+          todaysLeavesCount++;
+        } else if (d > today) {
+          upcomingLeavesCount++;
+        }
+      }
+    });
+
+    const leaveData = [
+      { name: "Today's Leaves", count: todaysLeavesCount },
+      { name: "Upcoming Leaves", count: upcomingLeavesCount }
+    ];
+
+    setLeaveAnalyticsData(leaveData);
 
   } catch (error) {
-    console.error("Error fetching post required data:", error);
-    setPostRequiredData([]);
+    console.error("Error fetching leave data:", error);
+    setLeaveAnalyticsData([
+      { name: "Today's Leaves", count: 0 },
+      { name: "Upcoming Leaves", count: 0 }
+    ]);
   }
 };
 
-const parseSheetDate = (dateStr) => {
-  // Expecting format DD/MM/YYYY
-  const parts = dateStr.split('/');
-  if (parts.length !== 3) return null;
-
-  const day = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1; // Months are 0-indexed
-  const year = parseInt(parts[2], 10);
-
-  if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-
-  return new Date(year, month, day);
-};
-
-
-  
 
   const fetchJoiningCount = async () => {
     try {
@@ -331,34 +461,33 @@ const fetchLeaveCount = async () => {
     return result;
   };
 
-  useEffect(() => {
+useEffect(() => {
     const fetchData = async () => {
-    try {
-      const [joiningResult, leavingResult] = await Promise.all([
-        fetchJoiningCount(),
-        fetchLeaveCount(),
-        fetchPostRequiredData() // Add this line
-      ]);
-        
-        // Calculate total employees (JOINING + LEAVING)
+      try {
+        const [joiningResult, leavingResult] = await Promise.all([
+          fetchJoiningCount(),
+          fetchLeaveCount(),
+          fetchPostRequiredData(),
+          fetchLeaveAnalytics()
+        ]);
+
         setTotalEmployee(joiningResult.total + leavingResult.total);
-        
-        // Prepare the monthly hiring data for the chart
+
         const monthlyData = prepareMonthlyHiringData(
-          joiningResult.monthlyHiring, 
+          joiningResult.monthlyHiring,
           leavingResult.monthlyLeaving
         );
-        
+
         setMonthlyHiringData(monthlyData);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
     };
-    
+
     fetchData();
   }, []);
 
-  return (
+return (
     <div className="space-y-6 page-content p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">HR Dashboard</h1>
@@ -409,94 +538,91 @@ const fetchLeaveCount = async () => {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Leave Analytics Chart */}
         <div className="bg-white rounded-xl shadow-lg border p-6">
           <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
-            <Users size={20} className="mr-2" />
-            Employee Status Distribution
+            <Clock size={20} className="mr-2" />
+            Leave Analytics (Today vs Upcoming)
           </h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={employeeStatusData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  dataKey="value"
-                  nameKey="name"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {employeeStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend wrapperStyle={{ color: '#374151' }} />
-              </PieChart>
+              <BarChart data={leaveAnalyticsData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
+                <XAxis dataKey="type" stroke="#374151" />
+                <YAxis stroke="#374151" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    color: '#374151'
+                  }}
+                />
+                <Bar dataKey="count" name="Employees on Leave" fill="#3B82F6" />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
+        {/* Posts Requiring More Candidates */}
         <div className="bg-white rounded-xl shadow-lg border p-6">
-  <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
-    <TrendingUp size={20} className="mr-2" />
-    Posts Requiring More Candidates
-  </h2>
-  <div className="h-80">
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={postRequiredData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
-        <XAxis dataKey="postName" stroke="#374151" />
-        <YAxis stroke="#374151" />
-        <Tooltip 
-          contentStyle={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            color: '#374151'
-          }} 
-        />
-        <Bar dataKey="numberOfPosts" name="Posts Required" fill="#3B82F6" />
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
-</div>
-
-     
+          <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
+            <TrendingUp size={20} className="mr-2" />
+            Posts Requiring More Candidates
+          </h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={postRequiredData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
+                <XAxis dataKey="postName" stroke="#374151" />
+                <YAxis stroke="#374151" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    color: '#374151'
+                  }}
+                />
+                <Bar dataKey="numberOfPosts" name="Posts Required" fill="#3B82F6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
-       <div className="bg-white rounded-xl shadow-lg border p-6">
-  <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
-    <UserPlus size={20} className="mr-2" />
-    Designation-wise Employee Count
-  </h2>
-  <div className="h-80">
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={designationData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
-        <XAxis dataKey="designation" stroke="#374151" />
-        <YAxis stroke="#374151" />
-        <Tooltip 
-          contentStyle={{ 
-            backgroundColor: 'white', 
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            color: '#374151'
-          }} 
-        />
-        <Bar dataKey="employees" name="Employees">
-          {designationData.map((entry, index) => (
-            <Cell 
-              key={`cell-${index}`} 
-              fill={index % 3 === 0 ? '#EF4444' : index % 3 === 1 ? '#10B981' : '#3B82F6'} 
-            />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
-</div>
 
-      
+      {/* Designation-wise Employee Count */}
+      <div className="bg-white rounded-xl shadow-lg border p-6">
+        <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
+          <UserPlus size={20} className="mr-2" />
+          Designation-wise Employee Count
+        </h2>
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={designationData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.1)" />
+              <XAxis dataKey="designation" stroke="#374151" />
+              <YAxis stroke="#374151" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  color: '#374151'
+                }}
+              />
+              <Bar dataKey="employees" name="Employees">
+                {designationData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={index % 3 === 0 ? '#EF4444' : index % 3 === 1 ? '#10B981' : '#3B82F6'}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 };

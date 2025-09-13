@@ -421,7 +421,6 @@ const handleSubmit = async (e) => {
   const leaveTypes = [
     'Casual Leave',
     'Earned Leave',
-    'Normal Leave',
   ];
 
   // Generate year options (current year and previous 5 years)
@@ -453,33 +452,38 @@ const calculateLeaveCounts = () => {
     'Earned Leave': approvedLeaves
       .filter(leave => leave.leaveType && leave.leaveType.toLowerCase().includes('earned'))
       .reduce((sum, leave) => sum + calculateDaysInMonth(leave.startDate, leave.endDate, selectedMonth, parseInt(selectedYear)), 0),
-    'Normal Leave': approvedLeaves
-      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase().includes('normal'))
-      .reduce((sum, leave) => sum + calculateDaysInMonth(leave.startDate, leave.endDate, selectedMonth, parseInt(selectedYear)), 0),
   };
 };
 
-  // Calculate leave balance based on approved leaves for the specific employee
-  const calculateLeaveBalance = () => {
-    // Filter for approved leaves for this specific employee
+  // Calculate remaining leaves for the year
+  const calculateRemainingLeaves = () => {
+    const currentYear = new Date().getFullYear();
+    
+    // Filter for approved leaves for this specific employee in the current year
     const approvedLeaves = leavesData.filter(leave => 
       leave.status && leave.status.toLowerCase() === 'approved' && 
-      leave.employeeName === user.Name &&
-      (selectedMonth === 'all' || 
-       isDateInSelectedPeriod(leave.startDate, selectedMonth, selectedYear) || 
-       isDateInSelectedPeriod(leave.endDate, selectedMonth, selectedYear))
+      leave.employeeName === user.Name
     );
     
+    // Calculate total days taken for each leave type in the current year
+    const casualLeaveTaken = approvedLeaves
+      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase().includes('casual'))
+      .reduce((sum, leave) => {
+        const leaveYear = new Date(parseDate(leave.startDate) || new Date()).getFullYear();
+        return leaveYear === currentYear ? sum + calculateDays(leave.startDate, leave.endDate) : sum;
+      }, 0);
+      
+    const earnedLeaveTaken = approvedLeaves
+      .filter(leave => leave.leaveType && leave.leaveType.toLowerCase().includes('earned'))
+      .reduce((sum, leave) => {
+        const leaveYear = new Date(parseDate(leave.startDate) || new Date()).getFullYear();
+        return leaveYear === currentYear ? sum + calculateDays(leave.startDate, leave.endDate) : sum;
+      }, 0);
+    
+    // Company policy: 12 Casual Leave and 15 Earned Leave per year
     return {
-      'Casual Leave': 7 - approvedLeaves
-        .filter(leave => leave.leaveType === 'Casual Leave')
-        .reduce((sum, leave) => sum + (leave.days || 0), 0),
-      'Earned Leave': 15 - approvedLeaves
-        .filter(leave => leave.leaveType === 'Earned Leave')
-        .reduce((sum, leave) => sum + (leave.days || 0), 0),
-      'Normal Leave': 10 - approvedLeaves
-        .filter(leave => leave.leaveType === 'Normal Leave')
-        .reduce((sum, leave) => sum + (leave.days || 0), 0),
+      'Casual Leave': 12 - casualLeaveTaken,
+      'Earned Leave': 24 - earnedLeaveTaken,
     };
   };
 
@@ -502,9 +506,6 @@ const calculateLeaveCounts = () => {
       'Earned Leave': approvedLeaves.filter(
         leave => leave.leaveType && leave.leaveType.toLowerCase() === 'earned leave'
       ).length,
-      'Normal Leave': approvedLeaves.filter(
-        leave => leave.leaveType && leave.leaveType.toLowerCase() === 'normal leave'
-      ).length,
     };
   };
 
@@ -526,6 +527,8 @@ const calculateLeaveCounts = () => {
     { value: '10', label: 'November' },
     { value: '11', label: 'December' }
   ];
+
+  const remainingLeaves = calculateRemainingLeaves();
 
   return (
     <div className="space-y-6 page-content p-6">
@@ -584,41 +587,59 @@ const calculateLeaveCounts = () => {
 
       {/* Leave Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-  {Object.entries(calculateLeaveCounts()).map(([leaveType, days]) => (
-    <div key={leaveType} className="bg-white rounded-xl shadow-lg border p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-600 font-medium">{leaveType}</p>
-          <h3 className="text-2xl font-bold text-gray-800">{days}</h3>
-          <p className="text-xs text-gray-500">
-            {selectedMonth === 'all' ? 'Total approved days' : `Days in ${monthOptions.find(m => m.value === selectedMonth)?.label || ''}`}
-          </p>
+        {Object.entries(calculateLeaveCounts()).map(([leaveType, days]) => (
+          <div key={leaveType} className="bg-white rounded-xl shadow-lg border p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 font-medium">{leaveType}</p>
+                <h3 className="text-2xl font-bold text-gray-800">{days}</h3>
+                <p className="text-xs text-gray-500">
+                  {selectedMonth === 'all' ? 'Total approved days' : `Days in ${monthOptions.find(m => m.value === selectedMonth)?.label || ''}`}
+                </p>
+              </div>
+              <div className="p-3 rounded-full bg-indigo-100">
+                <Calendar size={24} className="text-indigo-600" />
+              </div>
+            </div>
+          </div>
+        ))}
+        
+        {/* Total Leave Card */}
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 font-medium">Total Leave</p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {Object.values(calculateLeaveCounts()).reduce((sum, days) => sum + days, 0)}
+              </h3>
+              <p className="text-xs text-gray-500">
+                {selectedMonth === 'all' ? 'All approved days' : `Total days in ${monthOptions.find(m => m.value === selectedMonth)?.label || ''}`}
+              </p>
+            </div>
+            <div className="p-3 rounded-full bg-indigo-100">
+              <Calendar size={24} className="text-indigo-600" />
+            </div>
+          </div>
         </div>
-        <div className="p-3 rounded-full bg-indigo-100">
-          <Calendar size={24} className="text-indigo-600" />
+        
+        {/* Remaining Leaves Card */}
+        <div className="bg-white rounded-xl shadow-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600 font-medium">Remaining Leaves</p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {remainingLeaves['Casual Leave'] + remainingLeaves['Earned Leave']}
+              </h3>
+              <p className="text-xs text-gray-500">
+                Casual: {remainingLeaves['Casual Leave']} | Earned: {remainingLeaves['Earned Leave']}
+              </p>
+            </div>
+            <div className="p-3 rounded-full bg-green-100">
+              <CheckCircle size={24} className="text-green-600" />
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  ))}
-  
-  {/* Total Leave Card */}
-  <div className="bg-white rounded-xl shadow-lg border p-6">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm text-gray-600 font-medium">Total Leave</p>
-        <h3 className="text-2xl font-bold text-gray-800">
-          {Object.values(calculateLeaveCounts()).reduce((sum, days) => sum + days, 0)}
-        </h3>
-        <p className="text-xs text-gray-500">
-          {selectedMonth === 'all' ? 'All approved days' : `Total days in ${monthOptions.find(m => m.value === selectedMonth)?.label || ''}`}
-        </p>
-      </div>
-      <div className="p-3 rounded-full bg-indigo-100">
-        <Calendar size={24} className="text-indigo-600" />
-      </div>
-    </div>
-  </div>
-</div>
 
       {/* Leave Requests Table */}
       <div className="bg-white rounded-lg shadow border overflow-hidden">

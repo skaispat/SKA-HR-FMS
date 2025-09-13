@@ -25,6 +25,7 @@ const [formData, setFormData] = useState({
   candidateEmail: '',
   previousCompany: '',
   jobExperience: '',
+  department: '', // Add this line
   previousPosition: '',
   maritalStatus: '',
   candidatePhoto: null,
@@ -38,63 +39,56 @@ const [formData, setFormData] = useState({
   const GOOGLE_DRIVE_FOLDER_ID = '173O0ARBt4AmRDFfKwkxrwBsFLK8lTG6r';
 
   // Fetch all necessary data
-  const fetchAllData = async () => {
-    setLoading(true);
-    setTableLoading(true);
-    setError(null);
+const fetchAllData = async () => {
+  setLoading(true);
+  setTableLoading(true);
+  setError(null);
+  
+  try {
+    // Fetch INDENT data
+    const indentResponse = await fetch(
+      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=INDENT&action=fetch'
+    );
     
-    try {
-      // Fetch INDENT data
-      const indentResponse = await fetch(
-        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=INDENT&action=fetch'
-      );
+    if (!indentResponse.ok) {
+      throw new Error(`HTTP error! status: ${indentResponse.status}`);
+    }
+    
+    const indentResult = await indentResponse.json();
+    
+    if (indentResult.success && indentResult.data && indentResult.data.length >= 7) {
+      const headers = indentResult.data[5].map(h => h.trim());
+      const dataFromRow7 = indentResult.data.slice(6);
       
-      if (!indentResponse.ok) {
-        throw new Error(`HTTP error! status: ${indentResponse.status}`);
-      }
+      const getIndex = (headerName) => headers.findIndex(h => h === headerName);
       
-      const indentResult = await indentResponse.json();
+      const processedData = dataFromRow7
+        .filter(row => {
+          const status = row[getIndex('Status')];
+          const planned2 = row[getIndex('Planned 2')];
+          const actual2 = row[getIndex('Actual 2')];
+          
+          return status === 'NeedMore' && 
+                 planned2 && 
+                 (!actual2 || actual2 === '');
+        })
+        .map(row => ({
+          id: row[getIndex('Timestamp')],
+          indentNo: row[getIndex('Indent Number')],
+          post: row[getIndex('Post')],
+          department: row[getIndex('Department')],
+          gender: row[getIndex('Gender')],
+          prefer: row[getIndex('Prefer')],
+          numberOfPost: row[getIndex('Number Of Posts')],
+          competitionDate: row[getIndex('Completion Date')],
+          socialSite: row[getIndex('Social Site')],
+          status: row[getIndex('Status')],
+          plannedDate: row[getIndex('Planned 2')],
+          actual: row[getIndex('Actual 2')],
+          experience: row[getIndex('Experience')],
+        }));
       
-      if (indentResult.success && indentResult.data && indentResult.data.length >= 7) {
-        const headers = indentResult.data[5].map(h => h.trim());
-        const dataFromRow7 = indentResult.data.slice(6);
-        
-        const getIndex = (headerName) => headers.findIndex(h => h === headerName);
-        
-        const processedData = dataFromRow7
-          .filter(row => {
-            const status = row[getIndex('Status')];
-            const planned2 = row[getIndex('Planned 2')];
-            const actual2 = row[getIndex('Actual 2')];
-            
-            return status === 'NeedMore' && 
-                   planned2 && 
-                   (!actual2 || actual2 === '');
-          })
-          .map(row => ({
-            id: row[getIndex('Timestamp')],
-            indentNo: row[getIndex('Indent Number')],
-            post: row[getIndex('Post')],
-            gender: row[getIndex('Gender')],
-            prefer: row[getIndex('Prefer')],
-            numberOfPost: row[getIndex('Number Of Posts')],
-            competitionDate: row[getIndex('Completion Date')],
-            socialSite: row[getIndex('Social Site')],
-            status: row[getIndex('Status')],
-            plannedDate: row[getIndex('Planned 2')],
-            actual: row[getIndex('Actual 2')],
-            experience : row[getIndex('Experience')],
-          }));
-         const pendingTasks = processedData.filter(
-        task => task.plannedDate && !task.actual
-      );
-      
-        setIndentData(pendingTasks);
-      } else {
-        throw new Error(indentResult.error || 'Not enough rows in INDENT sheet data');
-      }
-
-      // Fetch ENQUIRY data
+      // Fetch ENQUIRY data to check for completed recruitments
       const enquiryResponse = await fetch(
         'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=ENQUIRY&action=fetch'
       );
@@ -112,6 +106,49 @@ const [formData, setFormData] = useState({
         
         const getEnquiryIndex = (headerName) => headers.findIndex(h => h === headerName);
         
+        // Count completed recruitments per indent number
+        const indentRecruitmentCount = {};
+        
+        enquiryRows.forEach(row => {
+          if (row[getEnquiryIndex('Timestamp')]) { // Filter out empty rows
+            const indentNo = row[getEnquiryIndex('Indent Number')];
+            const statusColumn = 27; // Column AB (index 27 as columns start from 0)
+            const statusValue = row[statusColumn]; // Column AB value
+            
+            if (indentNo && statusValue) {
+              if (!indentRecruitmentCount[indentNo]) {
+                indentRecruitmentCount[indentNo] = 0;
+              }
+              indentRecruitmentCount[indentNo]++;
+            }
+          }
+        });
+        
+        // Filter out indent items where recruitment is complete
+        const pendingTasks = processedData.filter(task => {
+          if (!task.plannedDate || task.actual) return false;
+          
+          const indentNo = task.indentNo;
+          const requiredPosts = parseInt(task.numberOfPost) || 0;
+          const completedRecruitments = indentRecruitmentCount[indentNo] || 0;
+          
+          // Show in pending only if not all required posts are filled
+          return completedRecruitments < requiredPosts;
+        });
+        
+        setIndentData(pendingTasks);
+      } else {
+        setIndentData(processedData.filter(task => task.plannedDate && !task.actual));
+      }
+
+      // Process ENQUIRY data for history tab
+      if (enquiryResult.success && enquiryResult.data && enquiryResult.data.length > 0) {
+        // First row contains headers (row 6 in your sheet)
+        const headers = enquiryResult.data[5].map(h => h ? h.trim() : '');
+        const enquiryRows = enquiryResult.data.slice(6);
+        
+        const getEnquiryIndex = (headerName) => headers.findIndex(h => h === headerName);
+        
         const processedEnquiryData = enquiryRows
           .filter(row => row[getEnquiryIndex('Timestamp')]) // Filter out empty rows
           .map(row => ({
@@ -119,6 +156,7 @@ const [formData, setFormData] = useState({
             indentNo: row[getEnquiryIndex('Indent Number')],
             candidateEnquiryNo: row[getEnquiryIndex('Candidate Enquiry Number')],
             applyingForPost: row[getEnquiryIndex('Applying For the Post')],
+            department: row[getEnquiryIndex('Department')],
             candidateName: row[getEnquiryIndex('Candidate Name')],
             candidateDOB: row[getEnquiryIndex('DCB')], // DCB appears to be DOB in your sheet
             candidatePhone: row[getEnquiryIndex('Candidate Phone Number')],
@@ -137,21 +175,22 @@ const [formData, setFormData] = useState({
             aadharNo: row[getEnquiryIndex('Aadhar No')] || ''
           }));
         
-        setEnquiryData(processedEnquiryData);
-       // addEnquiry(processedEnquiryData);
-      } else {
-        throw new Error(enquiryResult.error || 'Not enough rows in ENQUIRY sheet data');
+         setEnquiryData(processedEnquiryData);
       }
       
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setError(error.message);
-      toast.error('Failed to fetch data');
-    } finally {
-      setLoading(false);
-      setTableLoading(false);
+    } else {
+      throw new Error(indentResult.error || 'Not enough rows in INDENT sheet data');
     }
-  };
+    
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    setError(error.message);
+    toast.error('Failed to fetch data');
+  } finally {
+    setLoading(false);
+    setTableLoading(false);
+  }
+};
 
    const generateNextAAPIndentNumber = () => {
     // Extract all indent numbers from both indentData and enquiryData
@@ -289,6 +328,7 @@ const [formData, setFormData] = useState({
       candidateEmail: '',
       previousCompany: '',
       jobExperience: '',
+      department: item ? item.department : '',
       lastSalary: '',
       previousPosition: '',
       reasonForLeaving: '',
@@ -346,28 +386,28 @@ const handleSubmit = async (e) => {
     const now = new Date();
     const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
 
-    const rowData = [
-      formattedTimestamp,                           // Column A: Timestamp
-      selectedItem.indentNo,                        // Column B: Indent Number
-      generatedCandidateNo,                         // Column C: Candidate Enquiry Number
-      selectedItem.post,                            // Column D: Applying For the Post
-      formData.candidateName,                       // Column E: Candidate Name
-      formatDOB(formData.candidateDOB),            // Column F: DCB (DOB)
-      formData.candidatePhone,                      // Column G: Candidate Phone Number
-      formData.candidateEmail,                      // Column H: Candidate Email
-      formData.previousCompany || '',               // Column I: Previous Company Name
-      formData.jobExperience || '',                 // Column J: Job Experience
-      '',                    // Column K: Last Salary
-      formData.previousPosition || '',              // Column L: Previous Position
-      '',              // Column M: Reason For Leaving
-      formData.maritalStatus || '',                 // Column N: Marital Status
-      '',            // Column O: Last Employer Mobile
-      photoUrl,                                     // Column P: Candidate Photo (URL)
-      '',                   // Column Q: Reference By
-      formData.presentAddress || '',                // Column R: Present Address
-      formData.aadharNo || '',                      // Column S: Aadhar No
-      resumeUrl,                                    // Column T: Candidate Resume (URL)
-    ];
+const rowData = [
+  formattedTimestamp,                           // Column A: Timestamp
+  selectedItem.indentNo,                        // Column B: Indent Number
+  generatedCandidateNo,                         // Column C: Candidate Enquiry Number
+  selectedItem.post,                            // Column D: Applying For the Post
+  formData.candidateName,                       // Column E: Candidate Name
+  formatDOB(formData.candidateDOB),            // Column F: DCB (DOB)
+  formData.candidatePhone,                      // Column G: Candidate Phone Number
+  formData.candidateEmail,                      // Column H: Candidate Email
+  formData.previousCompany || '',               // Column I: Previous Company Name
+  formData.jobExperience || '',                 // Column J: Job Experience
+  formData.department || '',                    // Column K: Department (FIXED)
+  formData.previousPosition || '',              // Column L: Previous Position
+  '',              // Column M: Reason For Leaving
+  formData.maritalStatus || '',                 // Column N: Marital Status
+  '',            // Column O: Last Employer Mobile
+  photoUrl,                                     // Column P: Candidate Photo (URL)
+  '',                   // Column Q: Reference By
+  formData.presentAddress || '',                // Column R: Present Address
+  formData.aadharNo || '',                      // Column S: Aadhar No
+  resumeUrl,                                    // Column T: Candidate Resume (URL)
+];
 
     console.log('Submitting to ENQUIRY sheet:', rowData);
 
@@ -629,6 +669,9 @@ const handleSubmit = async (e) => {
                       Post
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
+                      Department
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
                       Gender
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
@@ -680,6 +723,9 @@ const handleSubmit = async (e) => {
                           {item.post}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.department}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.gender}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -716,6 +762,9 @@ const handleSubmit = async (e) => {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Post
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Department
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Candidate Name
@@ -768,6 +817,9 @@ const handleSubmit = async (e) => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.applyingForPost}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.department}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.candidateName}
@@ -868,6 +920,18 @@ const handleSubmit = async (e) => {
                     className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500"
                   />
                 </div>
+                <div>
+  <label className="block text-sm font-medium text-gray-500 mb-1">
+    Department
+  </label>
+  <input
+    type="text"
+    name="department"
+    value={formData.department}
+    onChange={handleInputChange}
+    className="w-full border border-gray-300 border-opacity-30 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-white bg-white bg-opacity-10 text-gray-500"
+  />
+</div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
                     Candidate Name *

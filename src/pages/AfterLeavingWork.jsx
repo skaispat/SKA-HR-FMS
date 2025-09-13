@@ -62,7 +62,7 @@ const AfterLeavingWork = () => {
         dateOfJoining: row[8] || '', 
         workingLocation: row[9] || '', 
         designation: row[10] || '', 
-        salary: row[11] || '', 
+        department: row[11] || '', 
         plannedDate: row[12] || '', 
         actual: row[13] || ''
       }));
@@ -429,6 +429,7 @@ const AfterLeavingWork = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Of Joining</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Of Leaving</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason Of Leaving</th>
                 </tr>
               </thead>
@@ -474,6 +475,7 @@ const AfterLeavingWork = () => {
                         {item.dateOfLeaving ? new Date(item.dateOfLeaving).toLocaleDateString() : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.designation}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.department}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.reasonOfLeaving}</td>
                     </tr>
                   ))

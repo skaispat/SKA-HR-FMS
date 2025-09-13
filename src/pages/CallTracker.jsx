@@ -77,6 +77,7 @@ const fetchEnquiryData = async () => {
         indentNo: row[getIndex("Indent Number")],
         candidateEnquiryNo: row[getIndex("Candidate Enquiry Number")],
         applyingForPost: row[getIndex("Applying For the Post")],
+        department: row[getIndex("Department")],
         candidateName: row[getIndex("Candidate Name")],
         candidateDOB: row[getIndex("DOB")], // Fetch DOB from Column F (index 5)
         candidatePhone: row[getIndex("Candidate Phone Number")],
@@ -524,6 +525,9 @@ const handleSubmit = async (e) => {
                       Applying For Post
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Department
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Candidate Name
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -589,6 +593,9 @@ const handleSubmit = async (e) => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.applyingForPost}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.department}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.candidateName}

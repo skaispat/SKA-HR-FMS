@@ -9,6 +9,7 @@ const Indent = () => {
   const [formData, setFormData] = useState({
     post: '',
     gender: '',
+    department:'',
     prefer: '',
     numberOfPost: '',
     competitionDate: '',
@@ -28,30 +29,9 @@ const Indent = () => {
     'Instagram',
     'Facebook',
     'LinkedIn',
-    'Twitter (X)',
-    'Youtube',
-    'Whatsapp',
-    'Indeed'
+    'Referral',
+    'Job Consultancy',
   ];
-  // const [lastIndentNumber, setLastIndentNumber] = useState(0);
-
-// useEffect(() => {
-//   const loadData = async () => {
-//     const result = await fetchLastIndentNumber();
-//     console.log('Fetch result:', result); // Debug
-    
-//     if (result.success) {
-//       setLastIndentNumber(result.lastIndentNumber);
-//       toast.success(`Last indent: ${result.fullLastIndent || result.lastIndentNumber}`);
-//     } else {
-//       toast.error(result.error);
-//       // Fallback to starting from 1 if detection fails
-//       setLastIndentNumber(1);
-//     }
-//   };
-  
-//   loadData();
-// }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -115,6 +95,7 @@ const generateIndentNumber = async () => {
       const indentNumberIndex = headers.indexOf('Indent Number');
       const postIndex = headers.indexOf('Post');
       const genderIndex = headers.indexOf('Gender');
+      const departmentIndex = headers.indexOf('Department');
        const preferIndex = headers.indexOf('Prefer');
          const noOFPostIndex = headers.indexOf('Number Of Posts');
          const completionDateIndex = headers.indexOf('Completion Date');
@@ -129,6 +110,7 @@ const generateIndentNumber = async () => {
         indentNumber: row[indentNumberIndex],
         post: row[postIndex],
         gender: row[genderIndex],
+        department: row[departmentIndex],
         prefer:row[preferIndex],
         noOfPost:row[noOFPostIndex],
         completionDate:row[completionDateIndex],
@@ -331,7 +313,8 @@ const fetchLastIndentNumber = async () => {
         "", // Column N (empty)
         "", // Column O (empty)
         formData.prefer === 'Experience' ? formData.experience : "", // Column P - Experience
-        formData.socialSite === 'Yes' ? formData.socialSiteTypes.join(', ') : "" // Column Q - Social Site Types
+        formData.socialSite === 'Yes' ? formData.socialSiteTypes.join(', ') : "", // Column Q - Social Site Types
+        formData.department,
       ];
 
       const response = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec', {
@@ -350,6 +333,7 @@ const fetchLastIndentNumber = async () => {
         setFormData({
           post: '',
           gender: '',
+          department:'',
           prefer: '',
           numberOfPost: '',
           competitionDate: '',
@@ -389,6 +373,7 @@ const fetchLastIndentNumber = async () => {
     setFormData({
       post: '',
       gender: '',
+      department:'',
       prefer: '',
       numberOfPost: '',
       competitionDate: '',
@@ -489,6 +474,24 @@ const fetchLastIndentNumber = async () => {
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                   <option value="Any">Any</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Department
+                </label>
+                <select
+                  name="department"
+                  value={formData.department}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">Select Department</option>
+                  <option value="Production">Production</option>
+                  <option value="Management">Management</option>
+                  <option value="Sales">Sales</option>
+                  <option value="HR">HR</option>
                 </select>
               </div>
 
@@ -673,6 +676,9 @@ const fetchLastIndentNumber = async () => {
                     Gender
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Department
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Prefer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -721,6 +727,9 @@ const fetchLastIndentNumber = async () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {item.gender}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.department}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {item.prefer}
