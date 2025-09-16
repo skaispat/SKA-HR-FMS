@@ -751,7 +751,7 @@ const handleSubmit = async (e) => {
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name of Employee *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name of Employee (कर्मचारी का नाम) *</label>
                 <select
                   name="employeeName"
                   value={formData.employeeName}
@@ -767,7 +767,7 @@ const handleSubmit = async (e) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID (कर्मचारी आईडी) </label>
                 <input
                   type="text"
                   name="employeeId"
@@ -789,7 +789,7 @@ const handleSubmit = async (e) => {
               </div> */}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Place to visit *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Place to visit (जगह का दौरा) *</label>
                 <input
                   type="text"
                   name="visitPlace"
@@ -802,7 +802,7 @@ const handleSubmit = async (e) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reason to visit *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason to visit (यात्रा करने का कारण) *</label>
                 <textarea
                   name="visitReason"
                   value={formData.visitReason}
@@ -827,7 +827,7 @@ const handleSubmit = async (e) => {
                   />
                 </div>
                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Arrival at Plant</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Arrival at Plant (प्लांट में वापसी) </label>
                   <input
                     type="datetime-local"
                     name="arrivalTime"
@@ -839,7 +839,7 @@ const handleSubmit = async (e) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name (एचओडी का नाम) *</label>
                 <select
                   name="hodName"
                   value={formData.hodName}
@@ -855,7 +855,7 @@ const handleSubmit = async (e) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number (व्हाट्सएप नंबर) *</label>
                 <input
                   type="tel"
                   name="whatsappNumber"
@@ -868,7 +868,7 @@ const handleSubmit = async (e) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Gate Pass Image (Optional)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Gate Pass Image (गेटपास इमेज)</label>
                 <input
                   type="file"
                   name="gatePassImage"

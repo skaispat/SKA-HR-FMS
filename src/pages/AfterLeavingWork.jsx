@@ -514,7 +514,7 @@ const AfterLeavingWork = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name (नाम) </label>
                   <input
                     type="text"
                     value={selectedItem.name}
@@ -525,14 +525,14 @@ const AfterLeavingWork = () => {
               </div>
 
               <div className="space-y-3">
-                <h4 className="text-md font-medium text-gray-700">Checklist Items</h4>
+                <h4 className="text-md font-medium text-gray-700">Checklist Items (चेकलिस्ट आइटम)</h4>
                 
                 {[
-                  { key: 'resignationLetterReceived', label: 'Resignation Letter Received' },
-                  { key: 'resignationAcceptance', label: 'Resignation Acceptance' },
-                  { key: 'handoverAssetsIdVisitingCard', label: 'Handover Of Assets, ID Card & Visiting Card' },
-                  { key: 'cancellationEmailBiometric', label: 'Cancellation Of Email ID & Biometric Access' },
-                  { key: 'removeBenefitEnrollment', label: 'Remove Benefit Enrollment' }
+                  { key: 'resignationLetterReceived', label: 'Resignation Letter Received (त्याग पत्र प्राप्त हुआ)' },
+                  { key: 'resignationAcceptance', label: 'Resignation Acceptance (इस्तीफा स्वीकार)' },
+                  { key: 'handoverAssetsIdVisitingCard', label: 'Handover Of Assets, ID Card & Visiting Card (संपत्ति, आईडी कार्ड और विजिटिंग कार्ड सौंपना)' },
+                  { key: 'cancellationEmailBiometric', label: 'Cancellation Of Email ID & Biometric Access (ईमेल आईडी और बायोमेट्रिक एक्सेस रद्द करना)' },
+                  { key: 'removeBenefitEnrollment', label: 'Remove Benefit Enrollment (लाभ नामांकन हटाएँ)' }
                 ].map((item) => (
                   <div key={item.key} className="flex items-center">
                     <input
@@ -550,7 +550,7 @@ const AfterLeavingWork = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Final Release Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Final Release Date (अंतिम रिलीज की तारीख) </label>
                 <input
                   type="date"
                   name="finalReleaseDate"

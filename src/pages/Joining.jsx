@@ -978,7 +978,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Joining ID *
+                    Joining ID (जॉइनिंग आईडी) *
                   </label>
                   <input
                     type="text"
@@ -992,7 +992,7 @@ const handleJoiningSubmit = async (e) => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name As Per Aadhar *
+                    Name As Per Aadhar (नाम आधार के अनुसार) *
                   </label>
                   <input
                     type="text"
@@ -1003,7 +1003,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Father Name
+                    Father Name (पिता का नाम)
                   </label>
                   <input
                     type="text"
@@ -1015,7 +1015,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date Of Birth As per Aadhar *
+                    Date Of Birth As per Aadhar (जन्मतिथि आधार के अनुसार)*
                   </label>
                   <input
                     type="text"
@@ -1026,7 +1026,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Gender
+                    Gender (लिंग)
                   </label>
                   <select
                     name="gender"
@@ -1034,15 +1034,15 @@ const handleJoiningSubmit = async (e) => {
                     onChange={handleJoiningInputChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
                   >
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
+                    <option value="">Select Gender (लिंग चुनें)</option>
+                    <option value="Male">Male (पुरुष)</option>
+                    <option value="Female">Female (महिला) </option>
+                    <option value="Other">Other (अन्य)</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Department
+                    Department (विभाग)
                   </label>
                   <input
                     type="text"
@@ -1053,7 +1053,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Equipment
+                    Equipment (उपकरण)
                   </label>
                   <input
                     type="text"
@@ -1069,7 +1069,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mobile No. *
+                    Mobile No. (मोबाइल नंबर) *
                   </label>
                   <input
                     type="tel"
@@ -1080,7 +1080,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Personal Email *
+                    Personal Email (ईमेल) *
                   </label>
                   <input
                     type="email"
@@ -1091,7 +1091,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Family Mobile Number *
+                    Family Mobile Number (परिवार का मोबाइल नंबर) *
                   </label>
                   <input
                     name="familyMobileNo"
@@ -1102,7 +1102,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Relationship With Family *
+                    Relationship With Family (परिवार के साथ संबंध) *
                   </label>
                   <input
                     name="relationshipWithFamily"
@@ -1117,7 +1117,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Address *
+                    Current Address (वर्त्तमान पता) *
                   </label>
                   <textarea
                     disabled
@@ -1132,7 +1132,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date Of Joining *
+                    Date Of Joining (शामिल होने की तारीख) *
                   </label>
                   <input
                     type="date"
@@ -1144,7 +1144,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Designation *
+                    Designation (पद का नाम) *
                   </label>
                   <input
                     type="text"
@@ -1155,7 +1155,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Highest Qualification
+                    Highest Qualification (उच्चतम योग्यता)
                   </label>
                   <input
                     name="highestQualification"
@@ -1170,7 +1170,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Aadhar Card Number *
+                    Aadhar Card Number (आधार कार्ड नंबर) *
                   </label>
                   <input
                     disabled
@@ -1180,7 +1180,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Bank Account No*
+                    Current Bank Account No (बैंक खाता संख्या) *
                   </label>
                   <input
                     name="currentBankAc"
@@ -1191,7 +1191,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    IFSC Code*
+                    IFSC Code (आईएफएससी कोड) *
                   </label>
                   <input
                     name="ifscCode"
@@ -1202,7 +1202,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Branch Name*
+                    Branch Name (शाखा का नाम) *
                   </label>
                   <input
                     name="branchName"
@@ -1217,7 +1217,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Aadhar Card
+                    Aadhar Card (आधार कार्ड)
                   </label>
                   <div className="flex items-center space-x-2">
                     <input
@@ -1232,7 +1232,7 @@ const handleJoiningSubmit = async (e) => {
                       className="flex items-center px-4 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 text-gray-700"
                     >
                       <Upload size={16} className="mr-2" />
-                      Upload Photo
+                      Upload Photo (फोटो अपलोड करें)
                     </label>
                     {joiningFormData.aadharFrontPhoto && (
                       <span className="text-sm text-gray-700">
@@ -1243,7 +1243,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Photo Of Front Bank Passbook
+                    Photo Of Front Bank Passbook (बैंक पासबुक की फ़ोटो)
                   </label>
                   <div className="flex items-center space-x-2">
                     <input

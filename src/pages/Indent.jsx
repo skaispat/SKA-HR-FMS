@@ -446,7 +446,7 @@ const fetchLastIndentNumber = async () => {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Post *
+                  Post (पद)*
                 </label>
                 <input
                   type="text"
@@ -461,7 +461,7 @@ const fetchLastIndentNumber = async () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gender *
+                  Gender (लिंग) *
                 </label>
                 <select
                   name="gender"
@@ -479,7 +479,7 @@ const fetchLastIndentNumber = async () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Department
+                  Department (विभाग)
                 </label>
                 <select
                   name="department"
@@ -497,7 +497,7 @@ const fetchLastIndentNumber = async () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Prefer
+                  Prefer (प्राथमिकता)
                 </label>
                 <select
                   name="prefer"
@@ -515,7 +515,7 @@ const fetchLastIndentNumber = async () => {
               {formData.prefer === "Experience" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Experience *
+                    Experience (अनुभव) *
                   </label>
                   <input
                     type="text"
@@ -531,7 +531,7 @@ const fetchLastIndentNumber = async () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Number Of Post *
+                  Number Of Post (पद की संख्या) *
                 </label>
                 <input
                   type="number"
@@ -547,7 +547,7 @@ const fetchLastIndentNumber = async () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Competition Date *
+                  Competition Date (समापन तिथि) *
                 </label>
                 <input
                   type="date"
@@ -560,7 +560,7 @@ const fetchLastIndentNumber = async () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Social Site *
+                  Social Site (सोशल साइट) *
                 </label>
                 <select
                   name="socialSite"
@@ -579,7 +579,7 @@ const fetchLastIndentNumber = async () => {
               {formData.socialSite === "Yes" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Social Site Types *
+                    Social Site Types (सोशल साइट प्रकार) *
                   </label>
                   <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2">
                     {socialSiteOptions.map((option) => (

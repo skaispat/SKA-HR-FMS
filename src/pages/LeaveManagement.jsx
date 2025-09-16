@@ -458,7 +458,7 @@ const handleLeaveAction = async (action) => {
   const leaveTypes = [
     'Casual Leave',
     'Earned Leave',
-    'Normal Leave',
+    // 'Normal Leave',
   ];
 
   const renderPendingLeavesTable = () => (
@@ -790,7 +790,7 @@ const handleLeaveAction = async (action) => {
       </div>
       <form onSubmit={handleSubmit} className="p-6 space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Employee Name *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Employee Name (कर्मचारी का नाम) *</label>
           <select
             name="employeeName"
             value={formData.employeeName}
@@ -806,7 +806,7 @@ const handleLeaveAction = async (action) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID (कर्मचारी आईडी) </label>
           <input
             type="text"
             name="employeeId"
@@ -817,7 +817,7 @@ const handleLeaveAction = async (action) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Designation (पद का नाम) </label>
           <input
             type="text"
             name="designation"
@@ -828,7 +828,7 @@ const handleLeaveAction = async (action) => {
         </div>
 
         <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">HOD Name (एचओडी का नाम) *</label>
             <select
               name="hodName"
               value={formData.hodName}
@@ -836,7 +836,7 @@ const handleLeaveAction = async (action) => {
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
             >
-              <option value="">Select HOD</option>
+              <option value="">Select HOD </option>
               {hodNames.map((name, index) => (
                 <option key={index} value={name}>{name}</option>
               ))}
@@ -844,7 +844,7 @@ const handleLeaveAction = async (action) => {
           </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type (छुट्टी के प्रकार) *</label>
           <select
             name="leaveType"
             value={formData.leaveType}
@@ -861,7 +861,7 @@ const handleLeaveAction = async (action) => {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">From Date *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">From Date (की तिथि से) *</label>
             <input
               type="date"
               name="fromDate"
@@ -872,7 +872,7 @@ const handleLeaveAction = async (action) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">To Date *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">To Date (तारीख तक) *</label>
             <input
               type="date"
               name="toDate"
@@ -887,13 +887,13 @@ const handleLeaveAction = async (action) => {
         {formData.fromDate && formData.toDate && (
           <div className="bg-blue-50 p-3 rounded-lg">
             <p className="text-sm text-blue-800">
-              Total Days: <span className="font-semibold">{calculateDays(formData.fromDate, formData.toDate)}</span>
+              Total Days (कुल दिन) : <span className="font-semibold">{calculateDays(formData.fromDate, formData.toDate)}</span>
             </p>
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Reason (कारण) *</label>
           <textarea
             name="reason"
             value={formData.reason}

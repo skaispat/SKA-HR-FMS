@@ -958,7 +958,7 @@ const formatDOB = (dateString) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Employee ID
+                    Employee ID (कर्मचारी आईडी)
                   </label>
                   <input
                     type="text"
@@ -969,7 +969,7 @@ const formatDOB = (dateString) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Name
+                    Name (नाम)
                   </label>
                   <input
                     type="text"
@@ -982,19 +982,19 @@ const formatDOB = (dateString) => {
 
               <div className="space-y-3">
                 <h4 className="text-md font-medium text-gray-500">
-                  Checklist Items
+                  Checklist Items (चेकलिस्ट आइटम)
                 </h4>
                 {[
                   {
                     key: "checkSalarySlipResume",
-                    label: "Check Salary Slip & Resume Copy",
+                    label: "Check Salary Slip & Resume Copy (वेतन पर्ची और बायोडाटा कॉपी)",
                   },
                   {
                     key: "offerLetterReceived",
-                    label: "Offer Letter Received",
+                    label: "Offer Letter Received (प्रस्ताव पत्र प्राप्त हुआ)",
                   },
-                  { key: "welcomeMeeting", label: "Welcome Meeting" },
-                  { key: "biometricAccess", label: "Biometric Access" },
+                  { key: "welcomeMeeting", label: "Welcome Meeting (स्वागत बैठक)" },
+                  { key: "biometricAccess", label: "Biometric Access बॉयोमीट्रिक ऐक्सेस" },
                 ].map((item) => (
                   <div key={item.key} className="flex items-center">
                     <input
@@ -1045,7 +1045,7 @@ const formatDOB = (dateString) => {
                       htmlFor="officialEmailId"
                       className="ml-2 text-sm text-gray-500"
                     >
-                      Official Email ID
+                      Official Email ID (ऑफ़िशियल ईमेल आईडी)
                     </label>
                   </div>
 
@@ -1092,7 +1092,7 @@ const formatDOB = (dateString) => {
                     htmlFor="assignAssets"
                     className="ml-2 text-sm text-gray-500"
                   >
-                    Assign Assets
+                    Assign Assets (असाइन एसेट्स)
                   </label>
                 </div>
                 {formData.assignAssets && (
@@ -1131,7 +1131,7 @@ const formatDOB = (dateString) => {
                     htmlFor="pfEsic"
                     className="ml-2 text-sm text-gray-500"
                   >
-                    PF / ESIC
+                    PF / ESIC (पी.एफ./ई.एस.आई.सी.)
                   </label>
                 </div>
                 {/* Company Directory Section */}
@@ -1148,7 +1148,7 @@ const formatDOB = (dateString) => {
                       htmlFor="companyDirectory"
                       className="ml-2 text-sm text-gray-500"
                     >
-                      Company Directory
+                      Company Directory (कंपनी निर्देशिका)
                     </label>
                   </div>
 

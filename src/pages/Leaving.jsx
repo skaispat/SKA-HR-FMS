@@ -471,7 +471,7 @@ const handleSubmit = async (e) => {
                 <thead className="bg-gray-100 ">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKA-Joining ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Of Joining</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Of Leaving</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
@@ -549,7 +549,7 @@ const handleSubmit = async (e) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name (नाम) </label>
                 <input
                   type="text"
                   value={selectedItem.candidateName}
@@ -558,7 +558,7 @@ const handleSubmit = async (e) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Date Of Leaving *</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Date Of Leaving (छोड़ने का दिनांक) *</label>
                 <input
                   type="date"
                   name="dateOfLeaving"
@@ -569,7 +569,7 @@ const handleSubmit = async (e) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Mobile Number</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Mobile Number (मोबाइल नंबर) </label>
                 <input
                   type="tel"
                   name="mobileNumber"
@@ -579,7 +579,7 @@ const handleSubmit = async (e) => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reason Of Leaving *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason Of Leaving (छोड़ने का कारण) *</label>
                 <textarea
                   name="reasonOfLeaving"
                   value={formData.reasonOfLeaving}

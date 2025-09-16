@@ -780,7 +780,7 @@ return (
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name of Employee
+                  Name of Employee (कर्मचारी का नाम)
                 </label>
                 <input
                   type="text"
@@ -793,7 +793,7 @@ return (
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Employee ID
+                  Employee ID (कर्मचारी आईडी)
                 </label>
                 <input
                   type="text"
@@ -819,7 +819,7 @@ return (
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Place to visit *
+                  Place to visit (जगह का दौरा) *
                 </label>
                 <input
                   type="text"
@@ -834,7 +834,7 @@ return (
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Reason to visit *
+                  Reason to visit (यात्रा करने का कारण) *
                 </label>
                 <textarea
                   name="visitReason"
@@ -850,7 +850,7 @@ return (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Departure From Plant *
+                    Departure From Plant (प्लांट से प्रस्थान)  *
                   </label>
                   <input
                     type="datetime-local"
@@ -863,7 +863,7 @@ return (
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Arrival at Plant
+                    Arrival at Plant (प्लांट में वापसी) 
                   </label>
                   <input
                     type="datetime-local"
@@ -877,7 +877,7 @@ return (
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  HOD Name *
+                  HOD Name (एचओडी का नाम) *
                 </label>
                 <select
                   name="hodName"
@@ -897,7 +897,7 @@ return (
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  WhatsApp Number
+                  WhatsApp Number (व्हाट्सएप नंबर)
                 </label>
                 <input
                   type="tel"
@@ -911,7 +911,7 @@ return (
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gate Pass Image (Optional)
+                  Gate Pass Image (गेटपास इमेज)
                 </label>
                 <input
                   type="file"

@@ -663,13 +663,13 @@ const rowData = [
                       Action
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
-                      Indent No.
+                      Indent No. 
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
-                      Post
+                      Post 
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
-                      Department
+                      Department 
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium  text-gray-500 uppercase tracking-wider">
                       Gender
@@ -884,7 +884,7 @@ const rowData = [
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Indent No.
+                    Indent No. (इंडेंट नंबर)
                   </label>
                   <input
                     type="text"
@@ -895,7 +895,7 @@ const rowData = [
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Enquiry No.
+                    Candidate Enquiry No. (उम्मीदवार इन्क्वायरी संख्या)
                   </label>
                   <input
                     type="text"
@@ -906,7 +906,7 @@ const rowData = [
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Applying For Post
+                    Applying For Post (पद के लिए आवेदन)
                   </label>
                   <input
                     type="text"
@@ -922,7 +922,7 @@ const rowData = [
                 </div>
                 <div>
   <label className="block text-sm font-medium text-gray-500 mb-1">
-    Department
+    Department (विभाग)
   </label>
   <input
     type="text"
@@ -934,7 +934,7 @@ const rowData = [
 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Name *
+                    Candidate Name (उम्मीदवार का नाम) *
                   </label>
                   <input
                     type="text"
@@ -947,7 +947,7 @@ const rowData = [
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate DOB
+                    Candidate DOB (उम्मीदवार की जन्मतिथि)
                   </label>
                   <input
                     type="date"
@@ -959,7 +959,7 @@ const rowData = [
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Phone *
+                    Candidate Phone (उम्मीदवार का फ़ोन) *
                   </label>
                   <input
                     type="tel"
@@ -972,7 +972,7 @@ const rowData = [
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Email
+                    Candidate Email (उम्मीदवार ईमेल)
                   </label>
                   <input
                     type="email"
@@ -984,7 +984,7 @@ const rowData = [
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Previous Company
+                    Previous Company (पिछली कंपनी)
                   </label>
                   <input
                     type="text"
@@ -996,7 +996,7 @@ const rowData = [
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Job Experience
+                    Job Experience (काम का अनुभव)
                   </label>
                   <input
                     type="text"
@@ -1008,7 +1008,7 @@ const rowData = [
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Previous Position
+                    Previous Position (पिछला पद)
                   </label>
                   <input
                     type="text"
@@ -1020,7 +1020,7 @@ const rowData = [
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Marital Status
+                    Marital Status (वैवाहिक स्थिति)
                   </label>
                   <select
                     name="maritalStatus"
@@ -1036,7 +1036,7 @@ const rowData = [
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Aadhar No.*
+                    Aadhar No. (आधार नं) *
                   </label>
                   <input
                     type="text"
@@ -1051,7 +1051,7 @@ const rowData = [
 
               <div>
                 <label className="block text-sm font-medium text-gray-500 mb-1">
-                  Current Address
+                  Current Address (वर्त्तमान पता)
                 </label>
                 <textarea
                   name="presentAddress"
@@ -1065,7 +1065,7 @@ const rowData = [
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Photo
+                    Candidate Photo (उम्मीदवार फोटो)
                   </label>
                   <div className="flex items-center space-x-2">
                     <input
@@ -1102,7 +1102,7 @@ const rowData = [
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Candidate Resume
+                    Candidate Resume (उम्मीदवार का बायोडाटा)
                   </label>
                   <div className="flex items-center space-x-2">
                     <input
@@ -1141,7 +1141,7 @@ const rowData = [
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Status *
+                    Status (स्थिति) *
                   </label>
                   <select
                     name="status"
