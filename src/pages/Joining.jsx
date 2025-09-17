@@ -978,7 +978,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Joining ID (जॉइनिंग आईडी) *
+                    Joining ID (जॉइनिंग आईडी)
                   </label>
                   <input
                     type="text"
@@ -986,13 +986,12 @@ const handleJoiningSubmit = async (e) => {
                     value={joiningFormData.joiningId}
                     onChange={handleJoiningInputChange}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-gray-700"
-                    required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name As Per Aadhar (नाम आधार के अनुसार) *
+                    Name As Per Aadhar (नाम आधार के अनुसार)
                   </label>
                   <input
                     type="text"
@@ -1015,7 +1014,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date Of Birth As per Aadhar (जन्मतिथि आधार के अनुसार)*
+                    Date Of Birth As per Aadhar (जन्मतिथि आधार के अनुसार)
                   </label>
                   <input
                     type="text"
@@ -1069,7 +1068,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mobile No. (मोबाइल नंबर) *
+                    Mobile No. (मोबाइल नंबर)
                   </label>
                   <input
                     type="tel"
@@ -1080,7 +1079,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Personal Email (ईमेल) *
+                    Personal Email (ईमेल)
                   </label>
                   <input
                     type="email"
@@ -1091,7 +1090,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Family Mobile Number (परिवार का मोबाइल नंबर) *
+                    Family Mobile Number (परिवार का मोबाइल नंबर)
                   </label>
                   <input
                     name="familyMobileNo"
@@ -1102,7 +1101,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Relationship With Family (परिवार के साथ संबंध) *
+                    Relationship With Family (परिवार के साथ संबंध)
                   </label>
                   <input
                     name="relationshipWithFamily"
@@ -1117,7 +1116,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Address (वर्त्तमान पता) *
+                    Current Address (वर्त्तमान पता)
                   </label>
                   <textarea
                     disabled
@@ -1132,7 +1131,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date Of Joining (शामिल होने की तारीख) *
+                    Date Of Joining (शामिल होने की तारीख)
                   </label>
                   <input
                     type="date"
@@ -1144,7 +1143,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Designation (पद का नाम) *
+                    Designation (पद का नाम)
                   </label>
                   <input
                     type="text"
@@ -1170,7 +1169,7 @@ const handleJoiningSubmit = async (e) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Aadhar Card Number (आधार कार्ड नंबर) *
+                    Aadhar Card Number (आधार कार्ड नंबर)
                   </label>
                   <input
                     disabled
@@ -1180,7 +1179,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Bank Account No (बैंक खाता संख्या) *
+                    Current Bank Account No (बैंक खाता संख्या)
                   </label>
                   <input
                     name="currentBankAc"
@@ -1191,7 +1190,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    IFSC Code (आईएफएससी कोड) *
+                    IFSC Code (आईएफएससी कोड)
                   </label>
                   <input
                     name="ifscCode"
@@ -1202,7 +1201,7 @@ const handleJoiningSubmit = async (e) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Branch Name (शाखा का नाम) *
+                    Branch Name (शाखा का नाम)
                   </label>
                   <input
                     name="branchName"
