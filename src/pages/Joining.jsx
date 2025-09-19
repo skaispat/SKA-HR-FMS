@@ -488,36 +488,73 @@ const fetchJoiningData = async () => {
     return `${day}/${month}/${year}`;
   };
 
-  const formatDOB = (dateString) => {
-    if (!dateString) return '';
-    
-    let date;
-    
-    if (dateString instanceof Date) {
-      date = dateString;
-    } else if (typeof dateString === 'string' && dateString.includes('/')) {
-      const parts = dateString.split('/');
-      if (parts.length === 3) {
-        if (parseInt(parts[0]) > 12) {
-          date = new Date(parts[2], parts[1] - 1, parts[0]);
-        } else {
-          date = new Date(parts[2], parts[0] - 1, parts[1]);
+const formatDOB = (dateString) => {
+  if (!dateString) return '';
+  
+  // If it's already in dd/mm/yyyy format, return as is
+  if (typeof dateString === 'string' && dateString.includes('/')) {
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      // Check if it's already in dd/mm/yyyy format
+      const day = parseInt(parts[0]);
+      const month = parseInt(parts[1]);
+      
+      if (day > 0 && day <= 31 && month > 0 && month <= 12) {
+        // If day is greater than 12, it's likely dd/mm/yyyy format
+        if (day > 12) {
+          return dateString; // Return as is (dd/mm/yyyy)
+        }
+        // If month is greater than 12, it's likely mm/dd/yyyy format
+        else if (month > 12) {
+          return `${parts[1]}/${parts[0]}/${parts[2]}`; // Swap day and month
         }
       }
-    } else {
-      date = new Date(dateString);
     }
-    
-    if (isNaN(date.getTime())) {
-      return dateString;
+  }
+  
+  // For other cases, try to parse as Date object
+  let date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return dateString; // Return original if can't parse
+  }
+  
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return `${day}/${month}/${year}`;
+};
+
+// Add a function to format date for storage (mm/dd/yyyy)
+const formatDateForStorage = (dateString) => {
+  if (!dateString) return '';
+  
+  // If it's in dd/mm/yyyy format, convert to mm/dd/yyyy
+  if (typeof dateString === 'string' && dateString.includes('/')) {
+    const parts = dateString.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0]);
+      const month = parseInt(parts[1]);
+      
+      // If it's already in dd/mm/yyyy format, swap day and month
+      if (day > 0 && day <= 31 && month > 0 && month <= 12 && day > 12) {
+        return `${parts[1]}/${parts[0]}/${parts[2]}`;
+      }
     }
-    
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    
-    return `${day}/${month}/${year}`;
-  };
+  }
+  
+  // For other cases, try to parse as Date object
+  let date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return dateString;
+  }
+  
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return `${month}/${day}/${year}`;
+};
 
   const handleJoiningInputChange = (e) => {
   const { name, value } = e.target;
@@ -694,9 +731,46 @@ const handleJoiningSubmit = async (e) => {
       fileUrls[field] = uploadedUrls[index];
     });
 
-    // Format the timestamp in the required format: 9/8/2025 10:55:38
-    const now = new Date();
+     const now = new Date();
     const formattedTimestamp = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+    
+    const formatDateForStorage = (dateString) => {
+      if (!dateString) return '';
+      
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
+      
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${month}/${day}/${year}`;
+    };
+    
+    // Format DOB for storage (mm/dd/yyyy)
+    const formatDOBForStorage = (dateString) => {
+      if (!dateString) return '';
+      
+      // If it's in dd/mm/yyyy format, convert to mm/dd/yyyy
+      if (typeof dateString === 'string' && dateString.includes('/')) {
+        const parts = dateString.split('/');
+        if (parts.length === 3) {
+          return `${parts[1]}/${parts[0]}/${parts[2]}`;
+        }
+      }
+      
+      // For other cases, try to parse as Date object
+      let date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return dateString;
+      }
+      
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${month}/${day}/${year}`;
+    };
     
     // Create an array with all column values in order
     const rowData = [];
@@ -706,12 +780,12 @@ const handleJoiningSubmit = async (e) => {
     rowData[1] = joiningFormData.joiningId;    // Column B: Joining ID
     rowData[2] = selectedItem.candidateName;   // Column C: Name As Per Aadhar
     rowData[3] = joiningFormData.fatherName;   // Column D: Father Name
-    rowData[4] = formatDOB(joiningFormData.dateOfJoining); // Column E: Date Of Joining
-    rowData[5] = selectedItem.designation || selectedItem.applyingForPost; // Column F: Designation (use from selectedItem)
+    rowData[4] = formatDateForStorage(joiningFormData.dateOfJoining); // Column E: Date Of Joining (mm/dd/yyyy)
+    rowData[5] = selectedItem.designation || selectedItem.applyingForPost; // Column F: Designation
     rowData[6] = fileUrls.aadharFrontPhoto;    // Column G: Aadhar card
-    rowData[7] = selectedItem.candidatePhoto;  // Column H: Candidate Photo (auto-filled)
+    rowData[7] = selectedItem.candidatePhoto;  // Column H: Candidate Photo
     rowData[8] = selectedItem.presentAddress;  // Column I: Current Address
-    rowData[9] = formatDOB(selectedItem.candidateDOB); // Column J: Date Of Birth (use from selectedItem)
+    rowData[9] = formatDOBForStorage(selectedItem.candidateDOB); // Column J: Date Of Birth (mm/dd/yyyy)
     rowData[10] = joiningFormData.gender;      // Column K: Gender
     rowData[11] = selectedItem.candidatePhone; // Column L: Mobile No.
     rowData[12] = joiningFormData.familyMobileNo; // Column M: Family Mobile Number
@@ -725,11 +799,10 @@ const handleJoiningSubmit = async (e) => {
     rowData[20] = selectedItem.department || '';  // Column U: Department
     rowData[21] = joiningFormData.equipment;   // Column V: Equipment
     rowData[22] = selectedItem.aadharNo;       // Column W: Aadhar Number
-    rowData[23] = selectedItem.candidateResume; // Column X: Candidate Resume (same as T)
+    rowData[23] = selectedItem.candidateResume; // Column X: Candidate Resume
     rowData[24] = "";
     rowData[25] = "";
     rowData[26] = selectedItem.actualDate || formattedTimestamp; // Column AA: Actual Date
-    // Removed Column AB assignment for JOINING sheet
 
     await postToJoiningSheet(rowData);
 

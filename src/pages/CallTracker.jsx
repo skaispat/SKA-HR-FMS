@@ -402,8 +402,18 @@ const handleSubmit = async (e) => {
 
   try {
     // For ALL statuses including Joining, submit to Follow-Up sheet first
+    // const now = new Date();
+    // const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+
     const now = new Date();
-    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 
     const rowData = [
       formattedTimestamp,

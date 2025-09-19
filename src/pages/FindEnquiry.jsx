@@ -383,31 +383,39 @@ const handleSubmit = async (e) => {
       toast.success('Resume uploaded successfully!');
     }
 
+    // Create timestamp in dd/mm/yyyy hh:mm:ss format
     const now = new Date();
-    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
 
-const rowData = [
-  formattedTimestamp,                           // Column A: Timestamp
-  selectedItem.indentNo,                        // Column B: Indent Number
-  generatedCandidateNo,                         // Column C: Candidate Enquiry Number
-  selectedItem.post,                            // Column D: Applying For the Post
-  formData.candidateName,                       // Column E: Candidate Name
-  formatDOB(formData.candidateDOB),            // Column F: DCB (DOB)
-  formData.candidatePhone,                      // Column G: Candidate Phone Number
-  formData.candidateEmail,                      // Column H: Candidate Email
-  formData.previousCompany || '',               // Column I: Previous Company Name
-  formData.jobExperience || '',                 // Column J: Job Experience
-  formData.department || '',                    // Column K: Department (FIXED)
-  formData.previousPosition || '',              // Column L: Previous Position
-  '',              // Column M: Reason For Leaving
-  formData.maritalStatus || '',                 // Column N: Marital Status
-  '',            // Column O: Last Employer Mobile
-  photoUrl,                                     // Column P: Candidate Photo (URL)
-  '',                   // Column Q: Reference By
-  formData.presentAddress || '',                // Column R: Present Address
-  formData.aadharNo || '',                      // Column S: Aadhar No
-  resumeUrl,                                    // Column T: Candidate Resume (URL)
-];
+    const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+
+    const rowData = [
+      formattedTimestamp,                           // Column A: Timestamp
+      selectedItem.indentNo,                        // Column B: Indent Number
+      generatedCandidateNo,                         // Column C: Candidate Enquiry Number
+      selectedItem.post,                            // Column D: Applying For the Post
+      formData.candidateName,                       // Column E: Candidate Name
+      formatDOB(formData.candidateDOB),            // Column F: DCB (DOB)
+      formData.candidatePhone,                      // Column G: Candidate Phone Number
+      formData.candidateEmail,                      // Column H: Candidate Email
+      formData.previousCompany || '',               // Column I: Previous Company Name
+      formData.jobExperience || '',                 // Column J: Job Experience
+      formData.department || '',                    // Column K: Department (FIXED)
+      formData.previousPosition || '',              // Column L: Previous Position
+      '',              // Column M: Reason For Leaving
+      formData.maritalStatus || '',                 // Column N: Marital Status
+      '',            // Column O: Last Employer Mobile
+      photoUrl,                                     // Column P: Candidate Photo (URL)
+      '',                   // Column Q: Reference By
+      formData.presentAddress || '',                // Column R: Present Address
+      formData.aadharNo || '',                      // Column S: Aadhar No
+      resumeUrl,                                    // Column T: Candidate Resume (URL)
+    ];
 
     console.log('Submitting to ENQUIRY sheet:', rowData);
 
@@ -523,7 +531,7 @@ const rowData = [
               action: 'updateCell',
               rowIndex: rowIndex.toString(),
               columnIndex: (actual2Index + 1).toString(), // Convert to string
-              value: formattedTimestamp
+              value: new Date().toISOString()
             }),
           }
         );

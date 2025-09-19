@@ -203,107 +203,69 @@ const AfterLeavingWork = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setSubmitting(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setSubmitting(true);
 
-    if (!selectedItem.employeeId || !selectedItem.name) {
-      toast.error('Please fill all required fields');
-      setSubmitting(false);
-      return;
+  if (!selectedItem.employeeId || !selectedItem.name) {
+    toast.error('Please fill all required fields');
+    setSubmitting(false);
+    return;
+  }
+
+  try {
+    // 1. First fetch the current data
+    const fullDataResponse = await fetch(
+      'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=LEAVING&action=fetch'
+    );
+    if (!fullDataResponse.ok) {
+      throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
     }
 
-    try {
-      // 1. First fetch the current data
-      const fullDataResponse = await fetch(
-        'https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec?sheet=LEAVING&action=fetch'
-      );
-      if (!fullDataResponse.ok) {
-        throw new Error(`HTTP error! status: ${fullDataResponse.status}`);
-      }
+    const fullDataResult = await fullDataResponse.json();
+    const allData = fullDataResult.data || fullDataResult;
 
-      const fullDataResult = await fullDataResponse.json();
-      const allData = fullDataResult.data || fullDataResult;
+    // Find header row in LEAVING sheet
+    let headerRowIndex = allData.findIndex(row =>
+      row.some(cell => cell?.toString().trim().toLowerCase().includes('employee id'))
+    );
+    if (headerRowIndex === -1) headerRowIndex = 4;
 
-      // Find header row in LEAVING sheet
-      let headerRowIndex = allData.findIndex(row =>
-        row.some(cell => cell?.toString().trim().toLowerCase().includes('employee id'))
-      );
-      if (headerRowIndex === -1) headerRowIndex = 4;
+    const headers = allData[headerRowIndex].map(h => h?.toString().trim());
 
-      const headers = allData[headerRowIndex].map(h => h?.toString().trim());
+    // Find Employee ID column index
+    const employeeIdIndex = headers.findIndex(h => h?.toLowerCase() === "employee id");
+    if (employeeIdIndex === -1) {
+      throw new Error("Could not find 'Employee ID' column");
+    }
 
-      // Find Employee ID column index
-      const employeeIdIndex = headers.findIndex(h => h?.toLowerCase() === "employee id");
-      if (employeeIdIndex === -1) {
-        throw new Error("Could not find 'Employee ID' column");
-      }
+    // Find the employee row index
+    const rowIndex = allData.findIndex((row, idx) =>
+      idx > headerRowIndex &&
+      row[employeeIdIndex]?.toString().trim() === selectedItem.employeeId?.toString().trim()
+    );
+    if (rowIndex === -1) throw new Error(`Employee ${selectedItem.employeeId} not found in LEAVING sheet`);
 
-      // Find the employee row index
-      const rowIndex = allData.findIndex((row, idx) =>
-        idx > headerRowIndex &&
-        row[employeeIdIndex]?.toString().trim() === selectedItem.employeeId?.toString().trim()
-      );
-      if (rowIndex === -1) throw new Error(`Employee ${selectedItem.employeeId} not found in LEAVING sheet`);
+    // Create current date for actual date (Column N)
+    const now = new Date();
+    const currentDateFormatted = now.getFullYear() + '-' + 
+                                String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                                String(now.getDate()).padStart(2, '0');
+    
+    // Check if all conditions are met
+    const allConditionsMet = 
+      formData.resignationLetterReceived &&
+      formData.resignationAcceptance &&
+      formData.handoverAssetsIdVisitingCard &&
+      formData.cancellationEmailBiometric &&
+      formData.removeBenefitEnrollment &&
+      formData.finalReleaseDate;
 
-      const now = new Date();
-      const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} `;
-      
-      // Check if all conditions are met
-      const allConditionsMet = 
-        formData.resignationLetterReceived &&
-        formData.resignationAcceptance &&
-        formData.handoverAssetsIdVisitingCard &&
-        formData.cancellationEmailBiometric &&
-        formData.removeBenefitEnrollment &&
-        formData.finalReleaseDate;
+    const updatePromises = [];
 
-      const updatePromises = [];
-
-      // Only update actual date if all conditions are met
-      if (allConditionsMet) {
-        updatePromises.push(
-          fetch(
-            "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              body: new URLSearchParams({
-                sheetName: "LEAVING",
-                action: "updateCell",
-                rowIndex: (rowIndex + 1).toString(),
-                columnIndex: "14", // Column N (Actual date)
-                value: formattedTimestamp,
-              }).toString(),
-            }
-          )
-        );
-      }
-
-      // Update checklist columns regardless of allConditionsMet
-      const fields = [
-        { value: formData.resignationLetterReceived ? "Yes" : "No", offset: 15 },
-        { value: formData.resignationAcceptance ? "Yes" : "No", offset: 16 },
-        { value: formData.handoverAssetsIdVisitingCard ? "Yes" : "No", offset: 17 },
-        { value: formData.cancellationEmailBiometric ? "Yes" : "No", offset: 18 },
-        { value: formData.removeBenefitEnrollment ? "Yes" : "No", offset: 20 }
-      ];
-
-      // Convert final release date to DD/MM/YYYY
-      let finalReleaseDateValue = "";
-      if (formData.finalReleaseDate) {
-        const dateParts = formData.finalReleaseDate.split('-');
-        if (dateParts.length === 3) {
-          finalReleaseDateValue = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-        } else {
-          finalReleaseDateValue = formData.finalReleaseDate;
-        }
-      }
-
-      // Add final release date update (now at column T, index 19)
+    // Only update actual date (Column N) if all conditions are met
+    if (allConditionsMet) {
       updatePromises.push(
         fetch(
           "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
@@ -316,62 +278,94 @@ const AfterLeavingWork = () => {
               sheetName: "LEAVING",
               action: "updateCell",
               rowIndex: (rowIndex + 1).toString(),
-              columnIndex: "20", // Column T (Final Release Date) - index 19 + 1
-              value: finalReleaseDateValue,
+              columnIndex: "14", // Column N (Actual date)
+              value: currentDateFormatted, // Send as YYYY-MM-DD format
             }).toString(),
           }
         )
       );
-
-      // Add all other field updates
-      fields.forEach((field) => {
-        updatePromises.push(
-          fetch(
-            "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              body: new URLSearchParams({
-                sheetName: "LEAVING",
-                action: "updateCell",
-                rowIndex: (rowIndex + 1).toString(),
-                columnIndex: (field.offset + 1).toString(),
-                value: field.value,
-              }).toString(),
-            }
-          )
-        );
-      });
-
-      const responses = await Promise.all(updatePromises);
-      const results = await Promise.all(responses.map((r) => r.json()));
-
-      const hasError = results.some((result) => !result.success);
-      if (hasError) {
-        console.error("Some cell updates failed:", results);
-        throw new Error("Some cell updates failed");
-      }
-
-      if (allConditionsMet) {
-        toast.success("All conditions met! Actual date updated successfully.");
-      } else {
-        toast.success(
-          "Conditions updated successfully. Actual date will be updated when all conditions are met."
-        );
-      }
-
-      setShowModal(false);
-      fetchLeavingData();
-    } catch (error) {
-      console.error('Update error:', error);
-      toast.error(`Update failed: ${error.message}`);
-    } finally {
-      setLoading(false);
-      setSubmitting(false);
     }
-  };
+
+    // Update Final Release Date (Column T) - always update if provided
+    if (formData.finalReleaseDate) {
+      updatePromises.push(
+        fetch(
+          "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              sheetName: "LEAVING",
+              action: "updateCell",
+              rowIndex: (rowIndex + 1).toString(),
+              columnIndex: "20", // Column T (Final Release Date)
+              value: formData.finalReleaseDate, // Send as YYYY-MM-DD format
+            }).toString(),
+          }
+        )
+      );
+    }
+
+    // Update checklist columns (these remain as Yes/No strings)
+    const fields = [
+      { value: formData.resignationLetterReceived ? "Yes" : "No", offset: 15 },
+      { value: formData.resignationAcceptance ? "Yes" : "No", offset: 16 },
+      { value: formData.handoverAssetsIdVisitingCard ? "Yes" : "No", offset: 17 },
+      { value: formData.cancellationEmailBiometric ? "Yes" : "No", offset: 18 },
+      { value: formData.removeBenefitEnrollment ? "Yes" : "No", offset: 20 }
+    ];
+
+    // Add all other field updates
+    fields.forEach((field) => {
+      updatePromises.push(
+        fetch(
+          "https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              sheetName: "LEAVING",
+              action: "updateCell",
+              rowIndex: (rowIndex + 1).toString(),
+              columnIndex: (field.offset + 1).toString(),
+              value: field.value,
+            }).toString(),
+          }
+        )
+      );
+    });
+
+    const responses = await Promise.all(updatePromises);
+    const results = await Promise.all(responses.map((r) => r.json()));
+
+    const hasError = results.some((result) => !result.success);
+    if (hasError) {
+      console.error("Some cell updates failed:", results);
+      throw new Error("Some cell updates failed");
+    }
+
+    if (allConditionsMet) {
+      toast.success("All conditions met! Actual date updated successfully.");
+    } else {
+      toast.success(
+        "Conditions updated successfully. Actual date will be updated when all conditions are met."
+      );
+    }
+
+    setShowModal(false);
+    fetchLeavingData();
+  } catch (error) {
+    console.error('Update error:', error);
+    toast.error(`Update failed: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setSubmitting(false);
+  }
+};
 
   const formatDOB = (dateString) => {
     if (!dateString) return '';

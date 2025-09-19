@@ -235,7 +235,6 @@ const uploadImageToDrive = async (file) => {
   }
 };
 
-// Update the handleSubmit function to include image upload
 const handleSubmit = async (e) => {
   e.preventDefault();
 
@@ -255,41 +254,46 @@ const handleSubmit = async (e) => {
       imageUrl = await uploadImageToDrive(formData.gatePassImage);
     }
     
-    // Format dates to dd/mm/yy hh:mm:ss
-    const formatDateForSheet = (dateTimeString) => {
-      const date = new Date(dateTimeString);
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = String(date.getFullYear()).slice(-2);
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const seconds = String(date.getSeconds()).padStart(2, '0');
-      
-      return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-    };
+    // Format dates to dd/mm/yy hh:mm:ss for timestamp
+    const formatDateTimeForSheet = (dateTimeString) => {
+  const date = new Date(dateTimeString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear()).slice(-2);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+};
     
-    const formattedDepartureTime = formatDateForSheet(formData.departureTime);
-    const formattedArrivalTime = formatDateForSheet(formData.arrivalTime);
+    // Format dates to dd/mm/yyyy for departure and arrival
+   const formatDateForSheet = (dateTimeString) => {
+  const date = new Date(dateTimeString);
+  return date; // Return Date object instead of formatted string
+};
     
-    // Prepare row data according to your column structure
-    const serialNo = getNextSerialNo();
-    const timestamp = new Date().toISOString();
-    const placeAndReason = `${formData.visitPlace} - ${formData.visitReason}`;
-    
-    const rowData = [
-      timestamp,                    // Column A: Timestamp
-      serialNo,                     // Column B: Serial No
-      formData.employeeId,          // Column C: Employee ID
-      formData.employeeName,        // Column D: Name of Employee
-      formData.department,          // Column E: Department
-      placeAndReason,               // Column F: Place and Reason to visit
-      formattedDepartureTime,       // Column G: Departure From Plant (formatted)
-      formattedArrivalTime,         // Column H: Arrival at Plant (formatted)
-      formData.hodName,             // Column I: HOD Name
-      formData.whatsappNumber,      // Column J: Employee Whatsapp Number
-      imageUrl,                     // Column K: Image of Employee gate pass (uploaded URL)
-      'pending'                     // Column L: Status
-    ];
+const timestamp = formatDateTimeForSheet(new Date().toISOString());
+const departureTimeDate = formatDateForSheet(formData.departureTime);
+const arrivalTimeDate = formatDateForSheet(formData.arrivalTime);
+
+const serialNo = getNextSerialNo();
+const placeAndReason = `${formData.visitPlace} - ${formData.visitReason}`;
+
+const rowData = [
+  timestamp,                    // Column A: Timestamp (dd/mm/yy hh:mm:ss)
+  serialNo,                     // Column B: Serial No
+  formData.employeeId,          // Column C: Employee ID
+  formData.employeeName,        // Column D: Name of Employee
+  formData.department,          // Column E: Department
+  placeAndReason,               // Column F: Place and Reason to visit
+  departureTimeDate,            // Column G: Departure From Plant (Date object)
+  arrivalTimeDate,              // Column H: Arrival at Plant (Date object)
+  formData.hodName,             // Column I: HOD Name
+  formData.whatsappNumber,      // Column J: Employee Whatsapp Number
+  imageUrl,                     // Column K: Image of Employee gate pass (uploaded URL)
+  'pending'                     // Column L: Status
+];
 
     // Send data to Google Sheets
     const response = await fetch(SCRIPT_URL, {

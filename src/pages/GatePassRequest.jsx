@@ -141,127 +141,126 @@ const fetchHodNames = async () => {
 };
 
 
- const fetchGatePassData = async () => {
-    setLoading(true);
-    setTableLoading(true);
-    setError(null);
+const fetchGatePassData = async () => {
+  setLoading(true);
+  setTableLoading(true);
+  setError(null);
 
-    try {
-      const response = await fetch(`${SCRIPT_URL}?sheet=Gate%20Pass&action=fetch`);
-      const result = await response.json();
-      
-      if (result.success) {
-        if (result.data && result.data.length > 1) {
-          const gatePassData = result.data.slice(1).map(row => ({
-            timestamp: row[0] || '', // Column A (Timestamp)
-            serialNo: row[1] || '', // Column B (Serial No)
-            employeeId: row[2] || '', // Column C (Employee ID)
-            employeeName: row[3] || '', // Column D (Name)
-            department: row[4] || '', // Column E (Department)
-            visitPlace: row[5] || '', // Column F (Place and Reason)
-            visitReason: row[5] || '', // Column F (combined with place)
-            departureTime: row[6] || '', // Column G (Departure Time)
-            arrivalTime: row[7] || '', // Column H (Arrival Time)
-            hodName: row[8] || '', // Column I (HOD Name)
-            whatsappNumber: row[9] || '', // Column J (WhatsApp)
-            gatePassImage: row[10] || '', // Column K (Image)
-            status: row[11] || 'pending' // Column L (Status)
-          }));
+  try {
+    const response = await fetch(`${SCRIPT_URL}?sheet=Gate%20Pass&action=fetch`);
+    const result = await response.json();
+    
+    if (result.success) {
+      if (result.data && result.data.length > 1) {
+        const gatePassData = result.data.slice(1).map(row => ({
+          timestamp: row[0] || '', // Column A (Timestamp)
+          serialNo: row[1] || '', // Column B (Serial No)
+          employeeId: row[2] || '', // Column C (Employee ID)
+          employeeName: row[3] || '', // Column D (Name)
+          department: row[4] || '', // Column E (Department)
+          visitPlace: row[5] || '', // Column F (Place and Reason)
+          visitReason: row[5] || '', // Column F (combined with place)
+          departureTime: row[6] || '', // Column G (Departure Time)
+          arrivalTime: row[7] || '', // Column H (Arrival Time)
+          hodName: row[8] || '', // Column I (HOD Name)
+          whatsappNumber: row[9] || '', // Column J (WhatsApp)
+          gatePassImage: row[10] || '', // Column K (Image)
+          status: row[11] || 'pending' // Column L (Status)
+        }));
 
-          // Filter passes to show only the current user's data using case-insensitive comparison
-          const userPendingPasses = gatePassData.filter(
-            pass => pass.status === 'pending' && 
-            pass.employeeName.toLowerCase() === currentUserName.toLowerCase()
-          );
-          const userApprovedPasses = gatePassData.filter(
-            pass => pass.status === 'approved' && 
-            pass.employeeName.toLowerCase() === currentUserName.toLowerCase()
-          );
-          const userRejectedPasses = gatePassData.filter(
-            pass => pass.status === 'rejected' && 
-            pass.employeeName.toLowerCase() === currentUserName.toLowerCase()
-          );
+        // Filter passes to show only the current user's data using case-insensitive comparison
+        const userPendingPasses = gatePassData.filter(
+          pass => pass.status === 'pending' && 
+          pass.employeeName.toLowerCase() === currentUserName.toLowerCase()
+        );
+        const userApprovedPasses = gatePassData.filter(
+          pass => pass.status === 'approved' && 
+          pass.employeeName.toLowerCase() === currentUserName.toLowerCase()
+        );
+        const userRejectedPasses = gatePassData.filter(
+          pass => pass.status === 'rejected' && 
+          pass.employeeName.toLowerCase() === currentUserName.toLowerCase()
+        );
 
-          setPendingPasses(userPendingPasses);
-          setApprovedPasses(userApprovedPasses);
-          setRejectedPasses(userRejectedPasses);
-          
-          // Check if user has already submitted a request today
-          checkTodaySubmission(gatePassData);
-          // Check monthly limit
-          checkMonthlyLimit(gatePassData);
-        } else {
-          setPendingPasses([]);
-          setApprovedPasses([]);
-          setRejectedPasses([]);
-          setCanSubmitRequest(true);
-          setMonthlyRequestCount(0);
-        }
+        setPendingPasses(userPendingPasses);
+        setApprovedPasses(userApprovedPasses);
+        setRejectedPasses(userRejectedPasses);
+        
+        // Check if user has already submitted a request today (any status)
+        checkTodaySubmission(result.data.slice(1));
+        // Check monthly limit (any status)
+        checkMonthlyLimit(result.data.slice(1));
       } else {
-        toast.error('Failed to load gate pass data');
+        setPendingPasses([]);
+        setApprovedPasses([]);
+        setRejectedPasses([]);
+        setCanSubmitRequest(true);
+        setMonthlyRequestCount(0);
       }
-    } catch (error) {
-      console.error('Error fetching gate pass data:', error);
-      setError(error.message);
-      toast.error(`Failed to load gate pass data: ${error.message}`);
-    } finally {
-      setLoading(false);
-      setTableLoading(false);
+    } else {
+      toast.error('Failed to load gate pass data');
     }
-  };
+  } catch (error) {
+    console.error('Error fetching gate pass data:', error);
+    setError(error.message);
+    toast.error(`Failed to load gate pass data: ${error.message}`);
+  } finally {
+    setLoading(false);
+    setTableLoading(false);
+  }
+};
 
-  const checkTodaySubmission = (allPasses) => {
-    const today = new Date().toDateString();
-    const userPassesToday = allPasses.filter(pass => {
-      if (pass.departureTime) {
-        try {
-          // Parse the date from the sheet format (dd/mm/yy hh:mm:ss)
-          const [datePart, timePart] = pass.departureTime.split(' ');
-          const [day, month, year] = datePart.split('/');
-          // Convert 2-digit year to 4-digit
-          const fullYear = parseInt(year) + 2000;
-          const passDate = new Date(fullYear, parseInt(month) - 1, parseInt(day));
-          
-          return passDate.toDateString() === today && 
-                 pass.employeeName.toLowerCase() === currentUserName.toLowerCase();
-        } catch (e) {
-          console.error('Error parsing date:', e);
-          return false;
-        }
-      }
-      return false;
-    });
-    
-    setCanSubmitRequest(userPassesToday.length === 0);
-  };
 
-  const checkMonthlyLimit = (allPasses) => {
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    
-    const userMonthlyRequests = allPasses.filter(pass => {
-      if (pass.departureTime) {
-        try {
-          // Parse the date from the sheet format (dd/mm/yy hh:mm:ss)
-          const [datePart, timePart] = pass.departureTime.split(' ');
-          const [day, month, year] = datePart.split('/');
-          // Convert 2-digit year to 4-digit
-          const fullYear = parseInt(year) + 2000;
-          const passDate = new Date(fullYear, parseInt(month) - 1, parseInt(day));
-          
-          return passDate.getMonth() === currentMonth && 
-                 passDate.getFullYear() === currentYear &&
-                 pass.employeeName.toLowerCase() === currentUserName.toLowerCase();
-        } catch (e) {
-          console.error('Error parsing date:', e);
-          return false;
-        }
+const checkTodaySubmission = (allPasses) => {
+  const today = new Date().toDateString();
+  const userPassesToday = allPasses.filter(pass => {
+    if (pass[0]) { // Column A: Timestamp (index 0)
+      try {
+        // Parse the timestamp from MM/DD/YYYY HH:MM:SS format
+        const [datePart, timePart] = pass[0].split(' ');
+        const [month, day, year] = datePart.split('/');
+        const fullYear = parseInt(year); // Already full year
+        const passDate = new Date(fullYear, parseInt(month) - 1, parseInt(day));
+        
+        return passDate.toDateString() === today && 
+               pass[3] && pass[3].toLowerCase() === currentUserName.toLowerCase(); // Column D: Name (index 3)
+      } catch (e) {
+        console.error('Error parsing date:', e);
+        return false;
       }
-      return false;
-    });
-    
-    setMonthlyRequestCount(userMonthlyRequests.length);
-  };
+    }
+    return false;
+  });
+  
+  setCanSubmitRequest(userPassesToday.length === 0);
+};
+
+const checkMonthlyLimit = (allPasses) => {
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  const userMonthlyRequests = allPasses.filter(pass => {
+    if (pass[0]) { // Column A: Timestamp (index 0)
+      try {
+        // Parse the timestamp from MM/DD/YYYY HH:MM:SS format
+        const [datePart, timePart] = pass[0].split(' ');
+        const [month, day, year] = datePart.split('/');
+        const fullYear = parseInt(year); // Already full year
+        const passDate = new Date(fullYear, parseInt(month) - 1, parseInt(day));
+        
+        return passDate.getMonth() === currentMonth && 
+               passDate.getFullYear() === currentYear &&
+               pass[3] && pass[3].toLowerCase() === currentUserName.toLowerCase(); // Column D: Name (index 3)
+      } catch (e) {
+        console.error('Error parsing date:', e);
+        return false;
+      }
+    }
+    return false;
+  });
+  
+  setMonthlyRequestCount(userMonthlyRequests.length);
+};
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -394,40 +393,50 @@ const handleSubmit = async (e) => {
       imageUrl = await uploadImageToDrive(formData.gatePassImage);
     }
     
-    const formatDateForSheet = (dateTimeString) => {
-      const date = new Date(dateTimeString);
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = String(date.getFullYear()).slice(-2);
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const seconds = String(date.getSeconds()).padStart(2, '0');
-      
-      return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
-    };
-    
-    const formattedDepartureTime = formatDateForSheet(formData.departureTime);
-    const formattedArrivalTime = formatDateForSheet(formData.arrivalTime);
-    
-    // Get the next serial number from all passes
-    const serialNo = getNextSerialNo(allPasses);
-    const timestamp = new Date().toISOString();
-    const placeAndReason = `${formData.visitPlace} - ${formData.visitReason}`;
-    
-    const rowData = [
-      timestamp,                    // Column A: Timestamp
-      serialNo,                     // Column B: Serial No (auto-incremented)
-      formData.employeeId,          // Column C: Employee ID
-      formData.employeeName,        // Column D: Name of Employee
-      formData.department,          // Column E: Department
-      placeAndReason,               // Column F: Place and Reason to visit
-      formattedDepartureTime,       // Column G: Departure From Plant (formatted)
-      formattedArrivalTime,         // Column H: Arrival at Plant (formatted)
-      formData.hodName,             // Column I: HOD Name
-      formData.whatsappNumber,      // Column J: Employee Whatsapp Number
-      imageUrl,                     // Column K: Image of Employee gate pass (uploaded URL)
-      'pending'                     // Column L: Status
-    ];
+const formatDateTimeForSheet = (date) => {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+  // Return in DD/MM/YYYY HH:MM:SS format for Google Sheets
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+};
+
+// Format dates to dd/mm/yyyy for departure and arrival
+const formatDateForSheet = (dateTimeString) => {
+  const date = new Date(dateTimeString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return `${day}/${month}/${year}`;
+};
+
+const timestamp = formatDateTimeForSheet(new Date());
+const formattedDepartureTime = formatDateForSheet(formData.departureTime);
+const formattedArrivalTime = formatDateForSheet(formData.arrivalTime);
+
+// Prepare row data according to your column structure
+const serialNo = getNextSerialNo(allPasses);
+const placeAndReason = `${formData.visitPlace} - ${formData.visitReason}`;
+
+const rowData = [
+  timestamp,                    // Column A: Timestamp (dd/mm/yy hh:mm:ss)
+  serialNo,                     // Column B: Serial No
+  formData.employeeId,          // Column C: Employee ID
+  formData.employeeName,        // Column D: Name of Employee
+  formData.department,          // Column E: Department
+  placeAndReason,               // Column F: Place and Reason to visit
+  formattedDepartureTime,       // Column G: Departure From Plant (dd/mm/yyyy)
+  formattedArrivalTime,         // Column H: Arrival at Plant (dd/mm/yyyy)
+  formData.hodName,             // Column I: HOD Name
+  formData.whatsappNumber,      // Column J: Employee Whatsapp Number
+  imageUrl,                     // Column K: Image of Employee gate pass (uploaded URL)
+  'pending'                     // Column L: Status
+];
 
     const insertResponse = await fetch(SCRIPT_URL, {
       method: 'POST',
@@ -665,19 +674,19 @@ return (
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">My Gate Pass Requests</h1>
         <button 
-          onClick={() => setShowModal(true)}
-          disabled={!canSubmitRequest || monthlyRequestCount >= 3}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <Plus size={16} className="mr-2" />
-          New Request
-          {monthlyRequestCount >= 3 && (
-            <span className="ml-2 text-xs">(Monthly limit reached)</span>
-          )}
-          {!canSubmitRequest && monthlyRequestCount < 3 && (
-            <span className="ml-2 text-xs">(Already submitted today)</span>
-          )}
-        </button>
+  onClick={() => setShowModal(true)}
+  disabled={!canSubmitRequest || monthlyRequestCount >= 3}
+  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+>
+  <Plus size={16} className="mr-2" />
+  New Request
+  {monthlyRequestCount >= 3 && (
+    <span className="ml-2 text-xs">(Monthly limit reached)</span>
+  )}
+  {!canSubmitRequest && monthlyRequestCount < 3 && (
+    <span className="ml-2 text-xs">(Already submitted today)</span>
+  )}
+</button>
       </div>
 
       <div className="bg-white p-4 rounded-lg shadow flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -35,6 +35,7 @@ const Sidebar = ({ onClose }) => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
+  const [currentLang, setCurrentLang] = useState('en');
 
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
@@ -44,6 +45,65 @@ const Sidebar = ({ onClose }) => {
   navigate('/login', { replace: true });
 
   };
+  
+useEffect(() => {
+  const hideStyles = document.createElement('style');
+  hideStyles.innerHTML = `
+    .goog-te-banner-frame.skiptranslate { display: none !important; }
+    body { top: 0 !important; }
+    #google_translate_element { display: none !important; }
+  `;
+  document.head.appendChild(hideStyles);
+
+  window.googleTranslateElementInit = () => {
+    if (window.google && window.google.translate && window.google.translate.TranslateElement) {
+      new window.google.translate.TranslateElement(
+        { pageLanguage: 'en', includedLanguages: 'en,hi', autoDisplay: false },
+        'google_translate_element'
+      );
+    }
+  };
+
+  if (!document.querySelector('script[src*="translate_a/element.js"]')) {
+    const script = document.createElement('script');
+    script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    script.async = true;
+    document.body.appendChild(script);
+  }
+
+  return () => {
+  };
+}, []);
+
+const toggleLanguage = () => {
+  const next = currentLang === 'en' ? 'hi' : 'en';
+  setCurrentLang(next);
+
+  const cookieValue = `/en/${next}`;
+  const hostname = location.hostname;
+  const domainPart = (hostname === 'localhost' || !hostname) ? '' : `;domain=.${hostname}`;
+  document.cookie = `googtrans=${cookieValue}${domainPart};path=/;max-age=31536000`;
+  document.cookie = `googtrans=${cookieValue};path=/;max-age=31536000`;
+
+  try {
+    if (typeof window.doGTranslate === 'function') {
+      window.doGTranslate(`en|${next}`);
+      return;
+    }
+
+    const sel = document.querySelector('#google_translate_element select');
+    if (sel) {
+      sel.value = next;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
+    }
+  } catch (e) {
+  }
+  window.location.reload();
+};
+
+
+
 
   const adminMenuItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -93,6 +153,15 @@ const SidebarContent = ({ onClose, isCollapsed = false }) => (
         <h1 className="text-xl font-bold flex items-center gap-2 text-white">
           <Users size={24} />
           <span>HR FMS</span>
+          <button
+  onClick={toggleLanguage}
+  className="p-2 rounded-md hover:bg-indigo-800 transition"
+  aria-label="Toggle language"
+  title={currentLang === 'en' ? 'Switch to Hindi' : 'Switch to English'}
+>
+  <Globe size={20} />
+</button>
+      <div id="google_translate_element" style={{ display: 'none' }} />
           {user?.role === 'employee' && (
             <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Employee</span>
           )}
@@ -143,7 +212,10 @@ const SidebarContent = ({ onClose, isCollapsed = false }) => (
                             : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
                         }`
                       }
-                      onClick={onClose}
+                      onClick={() => {
+                        onClose?.();
+                        setIsOpen(false);
+                      }}
                     >
                       <span>{subItem.label}</span>
                     </NavLink>
@@ -165,7 +237,10 @@ const SidebarContent = ({ onClose, isCollapsed = false }) => (
                   : 'text-indigo-100 hover:bg-indigo-800 hover:text-white'
               }`
             }
-            onClick={onClose}
+            onClick={() => {
+              onClose?.();
+              setIsOpen(false);
+            }}
           >
             <item.icon className={isCollapsed ? 'mx-auto' : 'mr-3'} size={20} />
             {!isCollapsed && <span>{item.label}</span>}
@@ -193,6 +268,7 @@ const SidebarContent = ({ onClose, isCollapsed = false }) => (
         onClick={() => {
           handleLogout();
           onClose?.();
+          setIsOpen(false);
         }}
         className="flex items-center py-2.5 px-4 rounded-lg text-white opacity-80 hover:bg-white hover:bg-opacity-10 hover:opacity-100 cursor-pointer transition-colors w-full"
       >
@@ -233,7 +309,7 @@ const SidebarContent = ({ onClose, isCollapsed = false }) => (
           onClick={() => setIsOpen(false)}
         />
         <div className={`fixed left-0 top-0 h-full z-50 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out`}>
-         <SidebarContent  />
+         <SidebarContent onClose={() => setIsOpen(false)} />
         </div>
       </div>
 
@@ -244,7 +320,7 @@ const SidebarContent = ({ onClose, isCollapsed = false }) => (
           onClick={() => setIsOpen(false)}
         />
         <div className={`fixed left-0 top-0 h-full z-50 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out`}>
-        <SidebarContent />
+        <SidebarContent onClose={() => setIsOpen(false)} />
         </div>
       </div>
 

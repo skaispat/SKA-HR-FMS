@@ -189,86 +189,99 @@ const fetchEmployees = async () => {
     return diffDays;
   };
 
-  // Format date to DD/MM/YYYY
-  const formatDOB = (dateString) => {
-    if (!dateString) return '';
+const formatDOB = (dateString) => {
+  if (!dateString) return '';
+  
+  // If it's already in DD/MM/YYYY format, return as-is
+  if (dateString.includes('/')) {
+    return dateString;
+  }
+  
+  // Convert from YYYY-MM-DD to DD/MM/YYYY
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return dateString; // Return as-is if not a valid date
+  }
+  
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return `${day}/${month}/${year}`;
+};
+
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (!formData.employeeName || !formData.leaveType || !formData.fromDate || !formData.toDate || !formData.reason || !formData.hodName) {
+    toast.error('Please fill all required fields');
+    return;
+  }
+
+  try {
+    setSubmitting(true);
+    const now = new Date();
     
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return dateString; // Return as-is if not a valid date
-    }
-    
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    
-    return `${day}/${month}/${year}`;
-  };
+    // Format timestamp as DD/MM/YYYY HH:MM:SS for proper Date object creation in Apps Script
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 
-  // Submit leave request
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const rowData = [
+      formattedTimestamp,           // Timestamp with time for Date object creation
+      "",                          // Serial number (empty for auto-increment)
+      formData.employeeId,         // Employee ID
+      formData.employeeName,       // Employee Name
+      formatDOB(formData.fromDate), // Leave Date Start (convert to DD/MM/YYYY)
+      formatDOB(formData.toDate),   // Leave Date End (convert to DD/MM/YYYY)
+      formData.reason,             // Reason
+      "Pending",                   // Status
+      formData.leaveType,          // Leave Type
+      formData.hodName,            // HOD Name (Column J, index 9)
+      formData.designation         // Designation (Column K, index 10)
+    ];
 
-    if (!formData.employeeName || !formData.leaveType || !formData.fromDate || !formData.toDate || !formData.reason || !formData.hodName) {
-      toast.error('Please fill all required fields');
-      return;
-    }
+    const response = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec', {
+      method: 'POST',
+      body: new URLSearchParams({
+        sheetName: 'Leave Management',
+        action: 'insert',
+        rowData: JSON.stringify(rowData),
+      }),
+    });
 
-    try {
-      setSubmitting(true);
-      const now = new Date();
-      const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const result = await response.json();
 
-      const rowData = [
-        formattedTimestamp,           // Timestamp
-        "",                          // Serial number (empty for auto-increment)
-        formData.employeeId,         // Employee ID
-        formData.employeeName,       // Employee Name
-        formatDOB(formData.fromDate), // Leave Date Start
-        formatDOB(formData.toDate),   // Leave Date End
-        formData.reason,             // Reason
-        "Pending",                   // Status
-        formData.leaveType,          // Leave Type
-        formData.hodName,            // HOD Name (Column J, index 9)
-        formData.designation         // Designation (Column K, index 10)
-      ];
-
-      const response = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec', {
-        method: 'POST',
-        body: new URLSearchParams({
-          sheetName: 'Leave Management',
-          action: 'insert',
-          rowData: JSON.stringify(rowData),
-        }),
+    if (result.success) {
+      toast.success('Leave Request submitted successfully!');
+      setFormData({
+        employeeId: '',
+        employeeName: '',
+        designation: '',
+        hodName: '',
+        leaveType: '',
+        fromDate: '',
+        toDate: '',
+        reason: ''
       });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success('Leave Request submitted successfully!');
-        setFormData({
-          employeeId: '',
-          employeeName: '',
-          designation: '',
-          hodName: '',
-          leaveType: '',
-          fromDate: '',
-          toDate: '',
-          reason: ''
-        });
-        setShowModal(false);
-        // Refresh the data
-        fetchLeaveData();
-      } else {
-        toast.error('Failed to insert: ' + (result.error || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Insert error:', error);
-      toast.error('Something went wrong!');
-    } finally {
-      setSubmitting(false);
+      setShowModal(false);
+      // Refresh the data
+      fetchLeaveData();
+    } else {
+      toast.error('Failed to insert: ' + (result.error || 'Unknown error'));
     }
-  };
+  } catch (error) {
+    console.error('Insert error:', error);
+    toast.error('Something went wrong!');
+  } finally {
+    setSubmitting(false);
+  }
+};
 
 const handleLeaveAction = async (action) => {
   if (!selectedRow) {
@@ -312,13 +325,11 @@ const handleLeaveAction = async (action) => {
     
     // Update dates if they were changed (Column E and F)
     if (editableDates.from && editableDates.from !== selectedRow.startDate) {
-      const [year, month, day] = editableDates.from.split('-');
-      currentRow[4] = `${day}/${month}/${year}`;
+      currentRow[4] = formatDOB(editableDates.from); // Convert to DD/MM/YYYY
     }
 
     if (editableDates.to && editableDates.to !== selectedRow.endDate) {
-      const [year, month, day] = editableDates.to.split('-');
-      currentRow[5] = `${day}/${month}/${year}`;
+      currentRow[5] = formatDOB(editableDates.to); // Convert to DD/MM/YYYY
     }
     
     // Update timestamp (Column A) and status (Column H, index 7)

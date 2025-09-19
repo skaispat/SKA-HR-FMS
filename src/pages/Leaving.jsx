@@ -195,25 +195,44 @@ const fetchJoiningData = async () => {
     }));
   };
 
-  const formatDOB = (dateString) => {
-    if (!dateString) return '';
-    
-    // If it's already in dd/mm/yyyy format, return as is
-    if (typeof dateString === 'string' && dateString.includes('/')) {
-      return dateString;
-    }
-    
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return dateString;
-    }
-    
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    
-    return `${day}/${month}/${year}`;
-  };
+const formatPlannedDate = (dateString) => {
+  if (!dateString) return '';
+  
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return dateString;
+  }
+  
+  // Format as "9/18/2025 13:56:18"
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = date.getFullYear();
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const seconds = date.getSeconds();
+  
+  return `${month}/${day}/${year} ${hours}:${minutes}:${seconds}`;
+};
+
+const formatDOB = (dateString) => {
+  if (!dateString) return '';
+  
+  // If it's already in dd/mm/yyyy format, return as is
+  if (typeof dateString === 'string' && dateString.includes('/')) {
+    return dateString;
+  }
+  
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return dateString;
+  }
+  
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  
+  return `${day}/${month}/${year}`;
+};
 
 const handleSubmit = async (e) => {
   e.preventDefault();
@@ -225,16 +244,18 @@ const handleSubmit = async (e) => {
   try {
     setSubmitting(true);
     const now = new Date();
-    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()} `;
+    // Format timestamp as "9/18/2025 13:56:18"
+    const formattedTimestamp = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
     
-    // Format date for JOINING sheet (dd/mm/yyyy)
-    const formattedLeavingDate = formatDOB(formData.dateOfLeaving);
-    
+    // Format leaving date as "20/09/2025" (dd/mm/yyyy)
+    const leavingDate = new Date(formData.dateOfLeaving);
+    const formattedLeavingDate = `${leavingDate.getDate().toString().padStart(2, '0')}/${(leavingDate.getMonth() + 1).toString().padStart(2, '0')}/${leavingDate.getFullYear()}`;
+
     const rowData = [
       formattedTimestamp,
       selectedItem.employeeNo,
       selectedItem.candidateName,
-      formattedLeavingDate,
+      formattedLeavingDate, // This will be stored in LEAVING sheet
       formData.mobileNumber,
       formData.reasonOfLeaving,
       selectedItem.firmName,
@@ -242,7 +263,7 @@ const handleSubmit = async (e) => {
       formatDOB(selectedItem.dateOfJoining),
       selectedItem.workingPlace,
       selectedItem.designation,
-      selectedItem.department, // Changed from salary to department
+      selectedItem.department,
     ];
 
     // First, update the JOINING sheet with leaving date (Column Y, index 24)
@@ -251,7 +272,7 @@ const handleSubmit = async (e) => {
       action: 'updateCell',
       rowIndex: selectedItem.rowIndex.toString(),
       columnIndex: '25', // Column Y is index 25 (0-based index + 1 for Sheets)
-      value: formattedLeavingDate,
+      value: formattedLeavingDate, // This will be stored in JOINING sheet
     });
 
     const updateJoiningResponse = await fetch('https://script.google.com/macros/s/AKfycbwfGaiHaPhexcE9i-A7q9m81IX6zWqpr4lZBe4AkhlTjVl4wCl0v_ltvBibfduNArBVoA/exec', {

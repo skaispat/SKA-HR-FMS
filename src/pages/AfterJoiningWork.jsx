@@ -566,9 +566,15 @@ const handleSubmit = async (e) => {
       throw new Error(`Employee ${selectedItem.joiningNo} not found`);
 
     const now = new Date();
+    // Format for display: DD/MM/YYYY
     const formattedTimestamp = `${now.getDate()}/${
       now.getMonth() + 1
-    }/${now.getFullYear()} `;
+    }/${now.getFullYear()}`;
+    
+    // Format for Google Sheets as a proper date object (YYYY-MM-DD format)
+    const formattedDateForSheets = `${now.getFullYear()}-${(now.getMonth() + 1)
+      .toString()
+      .padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
 
     const allFieldsYes =
       formData.checkSalarySlipResume &&
@@ -600,7 +606,7 @@ const handleSubmit = async (e) => {
               action: "updateCell",
               rowIndex: (rowIndex + 1).toString(),
               columnIndex: (actualColumnIndex + 1).toString(), // Column AB
-              value: formattedTimestamp,
+              value: formattedDateForSheets, // Send as YYYY-MM-DD format
             }).toString(),
           }
         )

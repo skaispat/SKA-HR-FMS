@@ -364,8 +364,17 @@ const handleSubmit = async (e) => {
 
   try {
     setSubmitting(true);
-    const now = new Date();
-    const formattedTimestamp = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+
+   const now = new Date();
+
+// Format timestamp as DD/MM/YYYY HH:MM:SS
+const day = String(now.getDate()).padStart(2, '0');
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const year = now.getFullYear();
+const hours = String(now.getHours()).padStart(2, '0');
+const minutes = String(now.getMinutes()).padStart(2, '0');
+const seconds = String(now.getSeconds()).padStart(2, '0');
+const formattedTimestamp = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 
     const rowData = [
       formattedTimestamp,           // Timestamp
@@ -393,18 +402,22 @@ const handleSubmit = async (e) => {
     const result = await response.json();
 
     if (result.success) {
-      toast.success('Leave Request submitted successfully!');
-      setFormData({
-        employeeId: employeeId,
-        employeeName: user.Name || '',
-        designation: formData.designation || '',
-        hodName: '',
-        leaveType: '',
-        fromDate: '',
-        toDate: '',
-        reason: ''
-      });
-      setShowModal(false);
+  toast.success('Leave Request submitted successfully!');
+  
+  // Refresh the data immediately to update the button state
+  await fetchLeaveData();
+  
+  setFormData({
+    employeeId: employeeId,
+    employeeName: user.Name || '',
+    designation: formData.designation || '',
+    hodName: '',
+    leaveType: '',
+    fromDate: '',
+    toDate: '',
+    reason: ''
+  });
+  setShowModal(false);
       // Refresh the data
       fetchLeaveData();
     } else {
@@ -418,6 +431,22 @@ const handleSubmit = async (e) => {
   }
 };
 
+const hasSubmittedToday = () => {
+  const today = new Date();
+  const todayStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+  
+  return leavesData.some(leave => {
+    // Case-insensitive employee name comparison
+    if (!leave.timestamp || !leave.employeeName || 
+        leave.employeeName.toLowerCase().trim() !== user.Name.toLowerCase().trim()) {
+      return false;
+    }
+    
+    // Extract date part from timestamp (M/D/YYYY H:M:S format from sheet)
+    const timestampDate = leave.timestamp.split(' ')[0];
+    return timestampDate === todayStr;
+  });
+};
   const leaveTypes = [
     'Casual Leave',
     'Earned Leave',
@@ -535,12 +564,21 @@ const calculateLeaveCounts = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Leave Request</h1>
         <button 
-          onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-        >
-          <Plus size={16} className="mr-2" />
-          New Leave Request
-        </button>
+  onClick={() => setShowModal(true)}
+  disabled={hasSubmittedToday()}
+  className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+    hasSubmittedToday() 
+      ? 'bg-gray-400 cursor-not-allowed' 
+      : 'bg-indigo-600 hover:bg-indigo-700'
+  }`}
+  title={hasSubmittedToday() ? "You have already submitted a leave request today. Please try again tomorrow." : ""}
+>
+  <Plus size={16} className="mr-2" />
+  New Leave Request
+  {hasSubmittedToday() && (
+    <span className="ml-2 text-xs">(Disabled for today)</span>
+  )}
+</button>
       </div>
 
       {/* Month and Year Filter */}
