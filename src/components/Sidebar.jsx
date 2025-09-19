@@ -36,6 +36,7 @@ const Sidebar = ({ onClose }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState('en');
+  const [showLanguageHint, setShowLanguageHint] = useState(false);
 
   const userString = localStorage.getItem('user');
   const user = userString ? JSON.parse(userString) : null;
@@ -45,6 +46,15 @@ const Sidebar = ({ onClose }) => {
   navigate('/login', { replace: true });
 
   };
+
+ useEffect(() => {
+  const hasSeenLanguageHint = localStorage.getItem('hasSeenLanguageHint');
+  if (!hasSeenLanguageHint && currentLang === 'en') {
+    setShowLanguageHint(true);
+  } else {
+    setShowLanguageHint(false);
+  }
+}, [currentLang]);
   
 useEffect(() => {
   const hideStyles = document.createElement('style');
@@ -78,6 +88,12 @@ useEffect(() => {
 const toggleLanguage = () => {
   const next = currentLang === 'en' ? 'hi' : 'en';
   setCurrentLang(next);
+  
+  // Hide the hint when switching to Hindi or when language is toggled
+  if (showLanguageHint) {
+    setShowLanguageHint(false);
+    localStorage.setItem('hasSeenLanguageHint', 'true');
+  }
 
   const cookieValue = `/en/${next}`;
   const hostname = location.hostname;
@@ -101,9 +117,6 @@ const toggleLanguage = () => {
   }
   window.location.reload();
 };
-
-
-
 
   const adminMenuItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -153,14 +166,40 @@ const SidebarContent = ({ onClose, isCollapsed = false }) => (
         <h1 className="text-xl font-bold flex items-center gap-2 text-white">
           <Users size={24} />
           <span>HR FMS</span>
-          <button
-  onClick={toggleLanguage}
-  className="p-2 rounded-md hover:bg-indigo-800 transition"
-  aria-label="Toggle language"
-  title={currentLang === 'en' ? 'Switch to Hindi' : 'Switch to English'}
->
-  <Globe size={20} />
-</button>
+          <div className="relative">
+  <button
+    onClick={toggleLanguage}
+    className="p-2 rounded-md hover:bg-indigo-800 transition relative"
+    aria-label="Toggle language"
+    title={currentLang === 'en' ? 'Switch to Hindi' : 'Switch to English'}
+  >
+    <Globe size={20} />
+  </button>
+  
+  {/* Language hint tooltip */}
+  {showLanguageHint && currentLang === 'en' && (
+  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 z-50">
+    {/* Arrow pointing up */}
+    <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+      <div className="w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-orange-500"></div>
+    </div>
+      
+      {/* Tooltip content */}
+      <div className="bg-orange-500 text-white px-3 py-2 rounded-lg shadow-lg whitespace-nowrap text-sm font-medium">
+        हिंदी के लिए क्लिक करें
+        <button
+          onClick={() => {
+            setShowLanguageHint(false);
+            localStorage.setItem('hasSeenLanguageHint', 'true');
+          }}
+          className="ml-2 text-orange-200 hover:text-white"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  )}
+</div>
       <div id="google_translate_element" style={{ display: 'none' }} />
           {user?.role === 'employee' && (
             <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Employee</span>
