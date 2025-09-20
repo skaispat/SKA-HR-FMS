@@ -251,7 +251,7 @@ const totalOvertime = filteredSalary.reduce((sum, record) => {
                     <td colSpan="7" className="px-6 py-12 text-center">
                       <p className="text-red-500">Error: {error}</p>
                       <button 
-                        onClick={fetchLeavingData}
+                        onClick={fetchSalaryData}
                         className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
                       >
                         Retry
