@@ -436,17 +436,34 @@ const Sidebar = ({ onClose }) => {
     return 'en';
   };
 
- useEffect(() => {
-  const savedLang = localStorage.getItem('selectedLanguage') || 'en';
-  setCurrentLang(savedLang);
-  const cookieValue = savedLang === 'en' ? '' : `/en/${savedLang}`;
-  const hostname = window.location.hostname;
-  const domainPart = (hostname === 'localhost' || !hostname) ? '' : `;domain=.${hostname}`;
-  document.cookie = `googtrans=${cookieValue}${domainPart};path=/;max-age=31536000;SameSite=Lax`;
-  document.cookie = `googtrans=${cookieValue};path=/;max-age=31536000;SameSite=Lax`;
-  if (window.googleTranslateElementInit) window.googleTranslateElementInit();
+  useEffect(() => {
+  const hasSeenLanguageHint = localStorage.getItem('hasSeenLanguageHint');
+  const currentDetectedLang = getCurrentLanguage();
+  setCurrentLang(currentDetectedLang);
+  
+  if (!hasSeenLanguageHint && currentDetectedLang === 'en') {
+    setShowLanguageHint(true);
+  } else {
+    setShowLanguageHint(false);
+  }
+  
+  // Ensure Google Translate cookie persistence on route change
+  const ensureLanguagePersistence = () => {
+    const detectedLang = getCurrentLanguage();
+    if (detectedLang !== 'en' && detectedLang) {
+      const cookieValue = `/en/${detectedLang}`;
+      const hostname = window.location.hostname;
+      const domainPart = (hostname === 'localhost' || !hostname) ? '' : `;domain=.${hostname}`;
+      
+      document.cookie = `googtrans=${cookieValue}${domainPart};path=/;max-age=31536000`;
+      document.cookie = `googtrans=${cookieValue};path=/;max-age=31536000`;
+    }
+  };
+  
+  // Run on component mount
+  ensureLanguagePersistence();
+  
 }, []);
-
   
   useEffect(() => {
     const checkLanguageChange = () => {
@@ -647,10 +664,6 @@ const Sidebar = ({ onClose }) => {
   };
 
   const toggleLanguage = () => {
-
-    // persist language to localStorage always
-localStorage.setItem('selectedLanguage', targetLang);
-
     const targetLang = currentLang === 'en' ? 'hi' : 'en';
     
     // Hide the hint when switching to Hindi or when language is toggled
